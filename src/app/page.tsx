@@ -9,6 +9,7 @@ import {
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
 import { MenuShowcase } from "@/components/shared/MenuShowcase";
+import { GalleryCarousel } from "@/components/shared/GalleryCarousel";
 import { getNextEventDate, formatEventDate, formatEventTime, formatPence } from "@/lib/utils";
 import { SEAT_PRICE_PENCE, CORKAGE_FEE_PENCE, SISTER_BUSINESSES } from "@/lib/constants";
 
@@ -100,7 +101,7 @@ export default function LandingPage() {
                     {formatPence(SEAT_PRICE_PENCE)} per seat
                   </p>
                   <p className="text-jollof-text-muted">
-                    + {formatPence(CORKAGE_FEE_PENCE)} corkage fee per person
+                    BYOB welcome &mdash; {formatPence(CORKAGE_FEE_PENCE)} corkage if bringing your own drinks
                   </p>
                 </div>
               </div>
@@ -119,6 +120,8 @@ export default function LandingPage() {
 
         {/* Menu Section */}
         <MenuShowcase />
+
+        <GalleryCarousel />
 
         {/* About Section */}
         <section id="about" className="py-20 px-4 bg-jollof-surface">

@@ -149,3 +149,15 @@ export interface Broadcast {
   recipientCount?: number;
   createdAt: string;
 }
+
+export type GalleryMediaType = "IMAGE" | "VIDEO";
+
+export interface GalleryItem {
+  id: string;
+  url: string;
+  storagePath: string;
+  mediaType: GalleryMediaType;
+  caption?: string;
+  eventDate?: string;
+  createdAt: string;
+}

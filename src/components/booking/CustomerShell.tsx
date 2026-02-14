@@ -18,13 +18,13 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/my-bookings", label: "My Bookings", icon: Ticket },
   { href: "/book", label: "Book Seats", icon: CalendarDays },
-  { href: "/gift", label: "Gift Ticket", icon: Gift },
+  { href: "/gift", label: "Gift a Seat", icon: Gift },
   { href: "/redeem", label: "Redeem Gift", icon: TicketCheck },
 ];
 
 export function CustomerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
+  const { user, loading, signOut, configured } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -41,16 +41,29 @@ export function CustomerShell({ children }: { children: React.ReactNode }) {
           Jollof Bash
         </Link>
         <div className="ml-auto flex items-center gap-4">
-          <span className="text-sm text-jollof-text-muted hidden sm:block">
-            {user?.email}
-          </span>
-          <button
-            onClick={signOut}
-            className="text-jollof-text-muted hover:text-jollof-text transition-colors"
-            aria-label="Sign out"
-          >
-            <LogOut size={20} />
-          </button>
+          {loading ? (
+            <span className="text-sm text-jollof-text-muted">Loading...</span>
+          ) : user ? (
+            <>
+              <span className="text-sm text-jollof-text-muted hidden sm:block">
+                {user.email}
+              </span>
+              <button
+                onClick={signOut}
+                className="text-jollof-text-muted hover:text-jollof-text transition-colors"
+                aria-label="Sign out"
+              >
+                <LogOut size={20} />
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm text-jollof-amber hover:text-jollof-amber-light"
+            >
+              {configured ? "Sign In" : "Sign In (Firebase not configured)"}
+            </Link>
+          )}
         </div>
       </header>
 

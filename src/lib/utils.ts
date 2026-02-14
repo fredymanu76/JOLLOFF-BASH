@@ -64,14 +64,16 @@ export function generateGiftCode(): string {
 
 /**
  * Calculate booking total in pence.
+ * Corkage is only added when byob is true.
  */
 export function calculateBookingTotal(
   seats: number,
   addOnsTotalPence: number,
-  discountPence: number
+  discountPence: number,
+  byob: boolean = false
 ): number {
   const seatsCost = seats * SEAT_PRICE_PENCE;
-  const corkage = seats * CORKAGE_FEE_PENCE;
+  const corkage = byob ? seats * CORKAGE_FEE_PENCE : 0;
   const subtotal = seatsCost + corkage + addOnsTotalPence;
   return Math.max(0, subtotal - discountPence);
 }

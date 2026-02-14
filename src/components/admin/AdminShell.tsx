@@ -8,7 +8,9 @@ import {
   Ticket,
   Tags,
   Wine,
+  ImageIcon,
   Megaphone,
+  UtensilsCrossed,
   LogOut,
   Menu,
   X,
@@ -21,8 +23,10 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/events", label: "Events", icon: CalendarDays },
   { href: "/admin/bookings", label: "Bookings", icon: Ticket },
+  { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/admin/discounts", label: "Discounts", icon: Tags },
   { href: "/admin/drinks", label: "Drinks Menu", icon: Wine },
+  { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
   { href: "/admin/broadcasts", label: "Broadcasts", icon: Megaphone },
 ];
 

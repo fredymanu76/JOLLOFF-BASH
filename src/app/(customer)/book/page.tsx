@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   CalendarDays,
   Minus,
@@ -10,6 +10,7 @@ import {
   CreditCard,
   Loader2,
   MapPin,
+  Wine,
 } from "lucide-react";
 import { MealSelector, MealSummary } from "@/components/booking/MealSelector";
 import {
@@ -25,9 +26,17 @@ import {
   VENUE,
 } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
-import type { MealSelection } from "@/types";
+import type { MealSelection, AddOn } from "@/types";
 
-type Step = "seats" | "meals" | "review";
+type Step = "seats" | "meals" | "drinks" | "review";
+type DrinkOption = "none" | "byob" | "order";
+
+interface DrinkSelection {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPricePence: number;
+}
 
 const emptyMeal: MealSelection = { starter: "", mains: [], dessert: "" };
 
@@ -42,14 +51,55 @@ export default function BookPage() {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
 
+  // Drinks state
+  const [drinkOption, setDrinkOption] = useState<DrinkOption>("none");
+  const [availableDrinks, setAvailableDrinks] = useState<AddOn[]>([]);
+  const [drinkSelections, setDrinkSelections] = useState<DrinkSelection[]>([]);
+  const [loadingDrinks, setLoadingDrinks] = useState(false);
+  const drinksFetched = useRef(false);
+
   const nextEvent = getNextEventDate();
-  const perSeatPence = SEAT_PRICE_PENCE + CORKAGE_FEE_PENCE;
-  const totalPence = perSeatPence * seats;
+
+  const isByob = drinkOption === "byob";
+  const corkagePence = isByob ? CORKAGE_FEE_PENCE * seats : 0;
+  const drinksTotalPence = drinkSelections.reduce(
+    (sum, d) => sum + d.unitPricePence * d.quantity,
+    0
+  );
+  const totalPence =
+    SEAT_PRICE_PENCE * seats + corkagePence + drinksTotalPence;
+
+  // Fetch available drinks once when entering drinks step
+  useEffect(() => {
+    if (step === "drinks" && !drinksFetched.current) {
+      drinksFetched.current = true;
+      setLoadingDrinks(true);
+      fetch("/api/drinks")
+        .then((res) => res.json())
+        .then((data) => {
+          const items: AddOn[] = data.items || [];
+          setAvailableDrinks(items);
+          if (items.length > 0) {
+            setDrinkSelections(
+              items.map((d) => ({
+                id: d.id,
+                name: d.name,
+                quantity: 0,
+                unitPricePence: d.pricePence,
+              }))
+            );
+          }
+        })
+        .catch(() => {
+          // Keep empty
+        })
+        .finally(() => setLoadingDrinks(false));
+    }
+  }, [step]);
 
   function handleSeatsChange(newSeats: number) {
     const clamped = Math.max(1, Math.min(MAX_SEATS_PER_BOOKING, newSeats));
     setSeats(clamped);
-    // Adjust meal selections array
     const newSelections = [...mealSelections];
     while (newSelections.length < clamped) {
       newSelections.push({ ...emptyMeal });
@@ -64,9 +114,21 @@ export default function BookPage() {
     setMealSelections(newSelections);
   }
 
+  function updateDrinkQuantity(drinkId: string, delta: number) {
+    setDrinkSelections((prev) =>
+      prev.map((d) =>
+        d.id === drinkId
+          ? { ...d, quantity: Math.max(0, d.quantity + delta) }
+          : d
+      )
+    );
+  }
+
   const allMealsComplete = mealSelections
     .slice(0, seats)
     .every((m) => m.starter && m.mains.length > 0 && m.dessert);
+
+  const selectedDrinks = drinkSelections.filter((d) => d.quantity > 0);
 
   async function handlePay() {
     setError("");
@@ -81,6 +143,9 @@ export default function BookPage() {
           mealSelections: mealSelections.slice(0, seats),
           userName: profile?.name || user?.email || "",
           userEmail: user?.email || "",
+          byob: isByob,
+          drinks:
+            drinkOption === "order" ? selectedDrinks : [],
         }),
       });
 
@@ -122,7 +187,7 @@ export default function BookPage() {
           <div className="text-right">
             <p className="text-sm text-jollof-text-muted">Per seat</p>
             <p className="font-bold text-jollof-amber text-lg">
-              {formatPence(perSeatPence)}
+              {formatPence(SEAT_PRICE_PENCE)}
             </p>
           </div>
         </div>
@@ -133,7 +198,8 @@ export default function BookPage() {
         {[
           { key: "seats", label: "1. Seats" },
           { key: "meals", label: "2. Meals" },
-          { key: "review", label: "3. Pay" },
+          { key: "drinks", label: "3. Drinks" },
+          { key: "review", label: "4. Pay" },
         ].map(({ key, label }) => (
           <div
             key={key}
@@ -182,22 +248,21 @@ export default function BookPage() {
           </div>
 
           <div className="bg-jollof-bg rounded-lg p-4 border border-jollof-border mb-6">
-            <div className="flex justify-between text-sm mb-1">
+            <div className="flex justify-between text-sm mb-2">
               <span className="text-jollof-text-muted">
                 {seats} seat{seats > 1 ? "s" : ""} x {formatPence(SEAT_PRICE_PENCE)}
               </span>
               <span>{formatPence(SEAT_PRICE_PENCE * seats)}</span>
             </div>
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-jollof-text-muted">
-                Corkage x {seats}
-              </span>
-              <span>{formatPence(CORKAGE_FEE_PENCE * seats)}</span>
-            </div>
             <div className="flex justify-between font-bold pt-2 border-t border-jollof-border">
-              <span>Total</span>
-              <span className="text-jollof-amber">{formatPence(totalPence)}</span>
+              <span>Subtotal</span>
+              <span className="text-jollof-amber">
+                {formatPence(SEAT_PRICE_PENCE * seats)}
+              </span>
             </div>
+            <p className="text-xs text-jollof-text-muted mt-2">
+              Drinks &amp; BYOB corkage options in step 3
+            </p>
           </div>
 
           <button
@@ -230,7 +295,7 @@ export default function BookPage() {
                           : "bg-jollof-bg text-jollof-text-muted"
                     }`}
                   >
-                    Seat {i + 1} {complete ? "✓" : ""}
+                    Seat {i + 1} {complete ? "\u2713" : ""}
                   </button>
                 );
               })}
@@ -260,8 +325,199 @@ export default function BookPage() {
             )}
             <button
               disabled={!allMealsComplete}
-              onClick={() => setStep("review")}
+              onClick={() => setStep("drinks")}
               className="bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 inline-flex items-center gap-2 ml-auto"
+            >
+              Drinks <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Drinks selection */}
+      {step === "drinks" && (
+        <div className="bg-jollof-surface rounded-xl p-6 border border-jollof-border">
+          <div className="flex items-center gap-2 mb-4">
+            <Wine size={20} className="text-jollof-amber" />
+            <h2 className="font-semibold text-lg">Drinks</h2>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            {/* No drinks option */}
+            <label
+              className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                drinkOption === "none"
+                  ? "border-jollof-amber bg-jollof-amber/10"
+                  : "border-jollof-border bg-jollof-bg hover:border-jollof-amber/50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="drinkOption"
+                value="none"
+                checked={drinkOption === "none"}
+                onChange={() => setDrinkOption("none")}
+                className="accent-jollof-amber"
+              />
+              <div>
+                <p className="font-semibold">No drinks</p>
+                <p className="text-sm text-jollof-text-muted">
+                  Just the food, please
+                </p>
+              </div>
+            </label>
+
+            {/* BYOB option */}
+            <label
+              className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                drinkOption === "byob"
+                  ? "border-jollof-amber bg-jollof-amber/10"
+                  : "border-jollof-border bg-jollof-bg hover:border-jollof-amber/50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="drinkOption"
+                value="byob"
+                checked={drinkOption === "byob"}
+                onChange={() => setDrinkOption("byob")}
+                className="accent-jollof-amber"
+              />
+              <div className="flex-1">
+                <p className="font-semibold">
+                  BYOB &mdash; Bring Your Own Bottle
+                </p>
+                <p className="text-sm text-jollof-text-muted">
+                  {formatPence(CORKAGE_FEE_PENCE)} corkage per person
+                </p>
+              </div>
+              <span className="text-jollof-amber font-semibold text-sm">
+                +{formatPence(CORKAGE_FEE_PENCE * seats)}
+              </span>
+            </label>
+
+            {/* Order drinks option */}
+            <label
+              className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                drinkOption === "order"
+                  ? "border-jollof-amber bg-jollof-amber/10"
+                  : "border-jollof-border bg-jollof-bg hover:border-jollof-amber/50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="drinkOption"
+                value="order"
+                checked={drinkOption === "order"}
+                onChange={() => setDrinkOption("order")}
+                className="accent-jollof-amber mt-1"
+              />
+              <div>
+                <p className="font-semibold">Order drinks from our menu</p>
+                <p className="text-sm text-jollof-text-muted">
+                  Pre-order drinks to enjoy with your meal
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* Drink quantity selectors — shown when "order" is selected */}
+          {drinkOption === "order" && (
+            <div className="mb-6">
+              {loadingDrinks ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2
+                    size={24}
+                    className="text-jollof-amber animate-spin"
+                  />
+                </div>
+              ) : availableDrinks.length === 0 ? (
+                <p className="text-sm text-jollof-text-muted bg-jollof-bg rounded-lg p-4 border border-jollof-border">
+                  No drinks available at the moment. You can choose BYOB instead.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {drinkSelections.map((drink) => (
+                    <div
+                      key={drink.id}
+                      className="flex items-center gap-3 bg-jollof-bg rounded-lg p-3 border border-jollof-border"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{drink.name}</p>
+                        <p className="text-xs text-jollof-text-muted">
+                          {formatPence(drink.unitPricePence)} each
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateDrinkQuantity(drink.id, -1)}
+                          disabled={drink.quantity <= 0}
+                          className="w-7 h-7 rounded-full bg-jollof-surface border border-jollof-border flex items-center justify-center hover:border-jollof-amber transition-colors disabled:opacity-30 text-xs"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="w-6 text-center text-sm font-semibold">
+                          {drink.quantity}
+                        </span>
+                        <button
+                          onClick={() => updateDrinkQuantity(drink.id, 1)}
+                          className="w-7 h-7 rounded-full bg-jollof-surface border border-jollof-border flex items-center justify-center hover:border-jollof-amber transition-colors text-xs"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                      {drink.quantity > 0 && (
+                        <span className="text-jollof-amber font-semibold text-sm w-16 text-right">
+                          {formatPence(drink.unitPricePence * drink.quantity)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Running total */}
+          <div className="bg-jollof-bg rounded-lg p-4 border border-jollof-border mb-6">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-jollof-text-muted">
+                {seats} seat{seats > 1 ? "s" : ""}
+              </span>
+              <span>{formatPence(SEAT_PRICE_PENCE * seats)}</span>
+            </div>
+            {isByob && (
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-jollof-text-muted">
+                  Corkage (BYOB) x {seats}
+                </span>
+                <span>{formatPence(corkagePence)}</span>
+              </div>
+            )}
+            {drinkOption === "order" && drinksTotalPence > 0 && (
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-jollof-text-muted">Drinks</span>
+                <span>{formatPence(drinksTotalPence)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold pt-2 border-t border-jollof-border">
+              <span>Total</span>
+              <span className="text-jollof-amber">
+                {formatPence(totalPence)}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep("meals")}
+              className="border border-jollof-border hover:border-jollof-amber text-jollof-text px-4 py-2.5 rounded-lg text-sm transition-colors inline-flex items-center gap-2"
+            >
+              <ArrowLeft size={16} /> Back
+            </button>
+            <button
+              onClick={() => setStep("review")}
+              className="bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors inline-flex items-center gap-2 ml-auto"
             >
               Review &amp; Pay <ArrowRight size={16} />
             </button>
@@ -269,7 +525,7 @@ export default function BookPage() {
         </div>
       )}
 
-      {/* Step 3: Review & Pay */}
+      {/* Step 4: Review & Pay */}
       {step === "review" && (
         <div className="bg-jollof-surface rounded-xl p-6 border border-jollof-border">
           <h2 className="font-semibold text-lg mb-4">Review Your Booking</h2>
@@ -287,6 +543,25 @@ export default function BookPage() {
               </div>
             ))}
 
+            {/* Drinks summary */}
+            {(isByob || (drinkOption === "order" && selectedDrinks.length > 0)) && (
+              <div className="bg-jollof-bg rounded-lg p-4 border border-jollof-border">
+                <p className="text-xs text-jollof-amber font-semibold uppercase tracking-wide mb-2">
+                  Drinks
+                </p>
+                {isByob && (
+                  <p className="text-sm">BYOB &mdash; Bring Your Own Bottle</p>
+                )}
+                {drinkOption === "order" &&
+                  selectedDrinks.map((d) => (
+                    <p key={d.id} className="text-sm">
+                      {d.name} x {d.quantity} &mdash;{" "}
+                      {formatPence(d.unitPricePence * d.quantity)}
+                    </p>
+                  ))}
+              </div>
+            )}
+
             <div className="bg-jollof-bg rounded-lg p-4 border border-jollof-border">
               <p className="text-xs text-jollof-amber font-semibold uppercase tracking-wide mb-2">
                 Payment
@@ -297,10 +572,20 @@ export default function BookPage() {
                 </span>
                 <span>{formatPence(SEAT_PRICE_PENCE * seats)}</span>
               </div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-jollof-text-muted">Corkage</span>
-                <span>{formatPence(CORKAGE_FEE_PENCE * seats)}</span>
-              </div>
+              {isByob && (
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-jollof-text-muted">
+                    Corkage (BYOB)
+                  </span>
+                  <span>{formatPence(corkagePence)}</span>
+                </div>
+              )}
+              {drinkOption === "order" && drinksTotalPence > 0 && (
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-jollof-text-muted">Drinks</span>
+                  <span>{formatPence(drinksTotalPence)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-jollof-border">
                 <span>Total</span>
                 <span className="text-jollof-amber">
@@ -312,7 +597,7 @@ export default function BookPage() {
 
           <div className="flex gap-3">
             <button
-              onClick={() => setStep("meals")}
+              onClick={() => setStep("drinks")}
               className="border border-jollof-border hover:border-jollof-amber text-jollof-text px-4 py-2.5 rounded-lg text-sm transition-colors inline-flex items-center gap-2"
             >
               <ArrowLeft size={16} /> Back

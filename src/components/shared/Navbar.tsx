@@ -35,10 +35,22 @@ export function Navbar() {
             Menu
           </Link>
           <Link
+            href="/#gallery"
+            className="text-jollof-text-muted hover:text-jollof-text transition-colors"
+          >
+            Gallery
+          </Link>
+          <Link
             href="/login"
             className="text-jollof-text-muted hover:text-jollof-text transition-colors"
           >
             Sign In
+          </Link>
+          <Link
+            href="/admin"
+            className="text-jollof-red hover:text-jollof-red-light transition-colors text-sm"
+          >
+            Admin
           </Link>
           <Link
             href="/register"
@@ -83,11 +95,25 @@ export function Navbar() {
             Menu
           </Link>
           <Link
+            href="/#gallery"
+            onClick={() => setMenuOpen(false)}
+            className="text-jollof-text-muted hover:text-jollof-text"
+          >
+            Gallery
+          </Link>
+          <Link
             href="/login"
             onClick={() => setMenuOpen(false)}
             className="text-jollof-text-muted hover:text-jollof-text"
           >
             Sign In
+          </Link>
+          <Link
+            href="/admin"
+            onClick={() => setMenuOpen(false)}
+            className="text-jollof-red hover:text-jollof-red-light"
+          >
+            Admin
           </Link>
           <Link
             href="/register"

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Check } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, Loader2 } from "lucide-react";
 import {
   MENU_STARTERS,
   MENU_MAINS,
   MENU_DESSERTS,
   type MenuItem,
+  type MenuCategory,
 } from "@/lib/constants";
 import type { MealSelection } from "@/types";
 import { cn } from "@/lib/utils";
@@ -55,11 +56,35 @@ function MenuItemCard({
 
 export function MealSelector({ value, onChange, label }: MealSelectorProps) {
   const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [starters, setStarters] = useState<MenuItem[]>(MENU_STARTERS);
+  const [mains, setMains] = useState<MenuItem[]>(MENU_MAINS);
+  const [desserts, setDesserts] = useState<MenuItem[]>(MENU_DESSERTS);
+  const [menuLoading, setMenuLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchMenu() {
+      try {
+        const res = await fetch("/api/menu");
+        const data = await res.json();
+        const items: MenuItem[] = data.items || [];
+        if (items.length > 0) {
+          setStarters(items.filter((i: MenuItem) => i.category === ("STARTER" as MenuCategory)));
+          setMains(items.filter((i: MenuItem) => i.category === ("MAIN" as MenuCategory)));
+          setDesserts(items.filter((i: MenuItem) => i.category === ("DESSERT" as MenuCategory)));
+        }
+      } catch {
+        // Keep defaults from constants
+      } finally {
+        setMenuLoading(false);
+      }
+    }
+    fetchMenu();
+  }, []);
 
   const steps = [
-    { title: "Choose your Starter", items: MENU_STARTERS },
-    { title: "Choose your Mains", subtitle: "Served buffet style — pick all you fancy", items: MENU_MAINS },
-    { title: "Choose your Dessert", items: MENU_DESSERTS },
+    { title: "Choose your Starter", items: starters },
+    { title: "Choose your Mains", subtitle: "Served buffet style — pick all you fancy", items: mains },
+    { title: "Choose your Dessert", items: desserts },
   ];
 
   const currentStep = steps[step];
@@ -72,10 +97,10 @@ export function MealSelector({ value, onChange, label }: MealSelectorProps) {
     if (step === 0) {
       onChange({ ...value, starter: value.starter === item.id ? "" : item.id });
     } else if (step === 1) {
-      const mains = value.mains.includes(item.id)
+      const newMains = value.mains.includes(item.id)
         ? value.mains.filter((id) => id !== item.id)
         : [...value.mains, item.id];
-      onChange({ ...value, mains });
+      onChange({ ...value, mains: newMains });
     } else {
       onChange({ ...value, dessert: value.dessert === item.id ? "" : item.id });
     }
@@ -88,6 +113,15 @@ export function MealSelector({ value, onChange, label }: MealSelectorProps) {
   }
 
   const isComplete = value.starter && value.mains.length > 0 && value.dessert;
+
+  if (menuLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 size={24} className="text-jollof-amber animate-spin" />
+        <span className="ml-2 text-sm text-jollof-text-muted">Loading menu...</span>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -184,16 +218,30 @@ export function MealSelector({ value, onChange, label }: MealSelectorProps) {
 
       {/* Summary when complete */}
       {isComplete && (
-        <MealSummary selection={value} />
+        <MealSummary selection={value} starters={starters} mains={mains} desserts={desserts} />
       )}
     </div>
   );
 }
 
-export function MealSummary({ selection }: { selection: MealSelection }) {
-  const starterItem = MENU_STARTERS.find((i) => i.id === selection.starter);
-  const mainItems = MENU_MAINS.filter((i) => selection.mains.includes(i.id));
-  const dessertItem = MENU_DESSERTS.find((i) => i.id === selection.dessert);
+export function MealSummary({
+  selection,
+  starters,
+  mains,
+  desserts,
+}: {
+  selection: MealSelection;
+  starters?: MenuItem[];
+  mains?: MenuItem[];
+  desserts?: MenuItem[];
+}) {
+  const starterList = starters || MENU_STARTERS;
+  const mainList = mains || MENU_MAINS;
+  const dessertList = desserts || MENU_DESSERTS;
+
+  const starterItem = starterList.find((i) => i.id === selection.starter);
+  const mainItems = mainList.filter((i) => selection.mains.includes(i.id));
+  const dessertItem = dessertList.find((i) => i.id === selection.dessert);
 
   if (!starterItem || mainItems.length === 0 || !dessertItem) return null;
 

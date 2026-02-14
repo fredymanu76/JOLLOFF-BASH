@@ -1,9 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getAdminDb } from "@/lib/firebase/admin";
+import type { BookingAddOn } from "@/types";
 
 function getStripeServer() {
   return new Stripe(process.env.STRIPE_SECRET_KEY ?? "");
+}
+
+function parseAddOns(metadata: Stripe.Metadata): BookingAddOn[] {
+  const addOns: BookingAddOn[] = [];
+
+  // Add corkage add-on if BYOB
+  if (metadata.byob === "true") {
+    const seats = parseInt(metadata.seats || "1", 10);
+    addOns.push({
+      addOnId: "corkage-byob",
+      name: "Corkage Fee (BYOB)",
+      quantity: seats,
+      unitPricePence: 200,
+    });
+  }
+
+  // Add ordered drinks
+  if (metadata.drinks) {
+    try {
+      const drinks = JSON.parse(metadata.drinks) as {
+        id: string;
+        name: string;
+        quantity: number;
+        unitPricePence: number;
+      }[];
+      for (const drink of drinks) {
+        if (drink.quantity > 0) {
+          addOns.push({
+            addOnId: drink.id,
+            name: drink.name,
+            quantity: drink.quantity,
+            unitPricePence: drink.unitPricePence,
+          });
+        }
+      }
+    } catch {
+      // Invalid JSON — skip drinks
+    }
+  }
+
+  return addOns;
 }
 
 export async function POST(req: NextRequest) {
@@ -40,10 +82,15 @@ export async function POST(req: NextRequest) {
       const bookingId = session.metadata?.bookingId;
 
       if (bookingId) {
-        await getAdminDb().collection("bookings").doc(bookingId).update({
-          paymentStatus: "PAID",
-          stripeSessionId: session.id,
-        });
+        const addOns = parseAddOns(session.metadata || {});
+        await getAdminDb()
+          .collection("bookings")
+          .doc(bookingId)
+          .update({
+            paymentStatus: "PAID",
+            stripeSessionId: session.id,
+            addOns,
+          });
       }
       break;
     }
