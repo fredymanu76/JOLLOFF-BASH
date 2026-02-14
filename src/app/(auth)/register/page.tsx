@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { FirebaseNotConfigured } from "@/components/shared/FirebaseNotConfigured";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -13,7 +14,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signUp, configured } = useAuth();
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -53,6 +54,8 @@ export default function RegisterPage() {
           Join Jollof Bash and book your seat
         </p>
       </div>
+
+      {!configured && <FirebaseNotConfigured />}
 
       {error && (
         <div className="bg-jollof-red/10 border border-jollof-red/30 text-jollof-red-light rounded-lg p-3 mb-4 text-sm">

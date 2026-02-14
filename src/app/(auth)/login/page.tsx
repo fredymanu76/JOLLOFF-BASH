@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { FirebaseNotConfigured } from "@/components/shared/FirebaseNotConfigured";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, configured } = useAuth();
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -40,6 +41,8 @@ export default function LoginPage() {
           Sign in to manage your bookings
         </p>
       </div>
+
+      {!configured && <FirebaseNotConfigured />}
 
       {error && (
         <div className="bg-jollof-red/10 border border-jollof-red/30 text-jollof-red-light rounded-lg p-3 mb-4 text-sm">

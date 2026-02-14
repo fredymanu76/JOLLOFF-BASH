@@ -11,7 +11,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+export const isFirebaseConfigured = !!firebaseConfig.apiKey;
+
 function getFirebaseApp(): FirebaseApp {
+  if (!isFirebaseConfigured) {
+    throw new Error("Firebase is not configured. Add credentials to .env.local");
+  }
   return getApps().length ? getApp() : initializeApp(firebaseConfig);
 }
 

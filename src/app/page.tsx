@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
+import { MenuShowcase } from "@/components/shared/MenuShowcase";
 import { getNextEventDate, formatEventDate, formatEventTime, formatPence } from "@/lib/utils";
 import { SEAT_PRICE_PENCE, CORKAGE_FEE_PENCE, SISTER_BUSINESSES } from "@/lib/constants";
 
@@ -115,6 +116,9 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* Menu Section */}
+        <MenuShowcase />
 
         {/* About Section */}
         <section id="about" className="py-20 px-4 bg-jollof-surface">

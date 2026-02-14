@@ -38,6 +38,14 @@ export interface JollofEvent {
   createdAt: string;
 }
 
+// Meal selections
+export interface MealSelection {
+  starter: string;  // menu item id
+  mains: string[];  // menu item ids (buffet style — pick multiple)
+  dessert: string;   // menu item id
+  dietaryNotes?: string;
+}
+
 export type PaymentStatus = "PENDING" | "PAID" | "REFUNDED" | "FAILED";
 
 export interface BookingAddOn {
@@ -69,6 +77,7 @@ export interface Booking {
   stripeSessionId?: string;
   bookingCode: string;
   attended: boolean;
+  mealSelections: MealSelection[];  // one per seat
   dietaryNotes?: string;
   createdAt: string;
 }
@@ -82,11 +91,14 @@ export interface GiftTicket {
   eventId: string;
   code: string;
   status: GiftTicketStatus;
+  recipientName: string;
+  recipientPhone: string;
   recipientEmail?: string;
-  recipientName?: string;
   redeemedByUserId?: string;
   seats: number;
+  mealSelection: MealSelection;
   pricePaidPence: number;
+  stripeSessionId?: string;
   createdAt: string;
 }
 

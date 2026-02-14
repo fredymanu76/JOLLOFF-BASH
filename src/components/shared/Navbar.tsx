@@ -29,6 +29,12 @@ export function Navbar() {
             Next Event
           </Link>
           <Link
+            href="/#menu"
+            className="text-jollof-text-muted hover:text-jollof-text transition-colors"
+          >
+            Menu
+          </Link>
+          <Link
             href="/login"
             className="text-jollof-text-muted hover:text-jollof-text transition-colors"
           >
@@ -68,6 +74,13 @@ export function Navbar() {
             className="text-jollof-text-muted hover:text-jollof-text"
           >
             Next Event
+          </Link>
+          <Link
+            href="/#menu"
+            onClick={() => setMenuOpen(false)}
+            className="text-jollof-text-muted hover:text-jollof-text"
+          >
+            Menu
           </Link>
           <Link
             href="/login"
