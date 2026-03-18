@@ -74,7 +74,7 @@ export interface Booking {
   discountTotalPence: number;
   totalPence: number;
   paymentStatus: PaymentStatus;
-  stripeSessionId?: string;
+  sumupCheckoutId?: string;
   bookingCode: string;
   attended: boolean;
   mealSelections: MealSelection[];  // one per seat
@@ -98,7 +98,7 @@ export interface GiftTicket {
   seats: number;
   mealSelection: MealSelection;
   pricePaidPence: number;
-  stripeSessionId?: string;
+  sumupCheckoutId?: string;
   createdAt: string;
 }
 

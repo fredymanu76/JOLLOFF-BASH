@@ -15,13 +15,11 @@ export async function GET(req: NextRequest) {
     const snapshot = await db
       .collection("giftTickets")
       .where("recipientPhone", "==", phone.trim())
-      .orderBy("createdAt", "desc")
       .get();
 
-    const gifts = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const gifts = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() } as Record<string, unknown> & { id: string }))
+      .sort((a, b) => (String(b.createdAt ?? "")).localeCompare(String(a.createdAt ?? "")));
 
     return NextResponse.json({ gifts });
   } catch (err) {

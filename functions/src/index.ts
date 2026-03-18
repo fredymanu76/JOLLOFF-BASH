@@ -23,5 +23,3 @@ export const onBookingCreated = onDocumentCreated(
   }
 );
 
-// Re-export webhook handlers
-export { handleStripeWebhook } from "./stripeWebhooks";

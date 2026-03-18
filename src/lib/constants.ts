@@ -14,8 +14,9 @@ export const BOOKING_CODE_LENGTH = 8;
 // Admin
 export const ADMIN_EMAIL = "fredymanu76@gmail.com";
 
-// Stripe
-export const STRIPE_CURRENCY = "gbp";
+// SumUp
+export const SUMUP_CURRENCY = "GBP";
+export const SUMUP_API_URL = "https://api.sumup.com/v0.1";
 
 // Venue
 export const VENUE = {

@@ -1,4 +1,3 @@
-import { getFirestore } from "firebase-admin/app";
 import * as admin from "firebase-admin";
 
 const SEAT_PRICE_PENCE = 2500;

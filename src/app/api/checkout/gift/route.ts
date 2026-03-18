@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-import { SEAT_PRICE_PENCE, CORKAGE_FEE_PENCE, STRIPE_CURRENCY } from "@/lib/constants";
-
-function getStripeServer() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY ?? "");
-}
+import { getAdminDb } from "@/lib/firebase/admin";
+import {
+  SEAT_PRICE_PENCE,
+  CORKAGE_FEE_PENCE,
+  SUMUP_CURRENCY,
+  SUMUP_API_URL,
+  BOOKING_CODE_LENGTH,
+} from "@/lib/constants";
+import type { MealSelection, BookingAddOn } from "@/types";
 
 interface DrinkLineItem {
   id: string;
   name: string;
   quantity: number;
   unitPricePence: number;
+}
+
+function generateGiftCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < BOOKING_CODE_LENGTH; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
 }
 
 export async function POST(req: NextRequest) {
@@ -27,7 +39,7 @@ export async function POST(req: NextRequest) {
     } = body as {
       recipientName: string;
       recipientPhone: string;
-      mealSelection: unknown;
+      mealSelection: MealSelection;
       purchaserName: string;
       purchaserEmail: string;
       byob?: boolean;
@@ -38,76 +50,93 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const stripe = getStripeServer();
+    // Calculate total in pence (1 seat for gift ticket)
+    let totalPence = SEAT_PRICE_PENCE;
+    const addOns: BookingAddOn[] = [];
 
-    // Build line items
-    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [
-      {
-        price_data: {
-          currency: STRIPE_CURRENCY,
-          unit_amount: SEAT_PRICE_PENCE,
-          product_data: {
-            name: `Jollof Bash Gift Ticket for ${recipientName}`,
-            description: "1 seat — includes meal selection",
-          },
-        },
-        quantity: 1,
-      },
-    ];
-
-    // Add corkage only if BYOB
     if (byob) {
-      line_items.push({
-        price_data: {
-          currency: STRIPE_CURRENCY,
-          unit_amount: CORKAGE_FEE_PENCE,
-          product_data: {
-            name: "Corkage Fee (BYOB)",
-            description: "Bring your own bottle corkage",
-          },
-        },
+      totalPence += CORKAGE_FEE_PENCE;
+      addOns.push({
+        addOnId: "corkage-byob",
+        name: "Corkage Fee (BYOB)",
         quantity: 1,
+        unitPricePence: CORKAGE_FEE_PENCE,
       });
     }
 
-    // Add drink line items
     if (drinks && drinks.length > 0) {
       for (const drink of drinks) {
         if (drink.quantity > 0) {
-          line_items.push({
-            price_data: {
-              currency: STRIPE_CURRENCY,
-              unit_amount: drink.unitPricePence,
-              product_data: {
-                name: drink.name,
-              },
-            },
+          totalPence += drink.quantity * drink.unitPricePence;
+          addOns.push({
+            addOnId: drink.id,
+            name: drink.name,
             quantity: drink.quantity,
+            unitPricePence: drink.unitPricePence,
           });
         }
       }
     }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      customer_email: purchaserEmail,
-      line_items,
-      metadata: {
-        type: "gift_ticket",
-        recipientName,
-        recipientPhone,
-        purchaserName: purchaserName || "",
-        purchaserEmail,
-        mealSelection: JSON.stringify(mealSelection),
-        byob: byob ? "true" : "false",
-        drinks: drinks && drinks.length > 0 ? JSON.stringify(drinks) : "",
-      },
-      success_url: `${req.nextUrl.origin}/gift/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.nextUrl.origin}/gift`,
+    // Convert pence to pounds for SumUp
+    const totalPounds = totalPence / 100;
+
+    // Create Firestore gift ticket doc FIRST with PENDING payment
+    const db = getAdminDb();
+    const giftRef = db.collection("giftTickets").doc();
+    const giftTicketId = giftRef.id;
+    const giftCode = generateGiftCode();
+
+    await giftRef.set({
+      id: giftTicketId,
+      purchaserName: purchaserName || "",
+      purchaserEmail,
+      recipientName,
+      recipientPhone,
+      mealSelection,
+      addOns,
+      code: giftCode,
+      status: "PURCHASED",
+      seats: 1,
+      pricePaidPence: totalPence,
+      paymentStatus: "PENDING",
+      createdAt: new Date().toISOString(),
     });
 
-    return NextResponse.json({ sessionId: session.id, url: session.url });
+    // Create SumUp checkout
+    const origin = req.nextUrl.origin;
+    const sumupRes = await fetch(`${SUMUP_API_URL}/checkouts`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.SUMUP_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        checkout_reference: giftTicketId,
+        amount: totalPounds,
+        currency: SUMUP_CURRENCY,
+        merchant_code: process.env.SUMUP_MERCHANT_CODE,
+        description: `Jollof Bash Gift Ticket for ${recipientName}`,
+        redirect_url: `${origin}/gift/success?checkout_id=${giftTicketId}`,
+        return_url: `${origin}/api/sumup/webhook`,
+      }),
+    });
+
+    if (!sumupRes.ok) {
+      const errBody = await sumupRes.text();
+      await giftRef.delete();
+      return NextResponse.json(
+        { error: `SumUp checkout failed: ${errBody}` },
+        { status: 502 }
+      );
+    }
+
+    const checkout = await sumupRes.json();
+
+    // Store the SumUp checkout ID
+    await giftRef.update({ sumupCheckoutId: checkout.id });
+
+    return NextResponse.json({ url: checkout.hosted_checkout_url });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create checkout";
     return NextResponse.json({ error: message }, { status: 500 });
