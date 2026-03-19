@@ -1,0 +1,12 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "giftTickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "recipientPhone", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}

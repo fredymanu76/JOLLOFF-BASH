@@ -72,6 +72,8 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <GalleryCarousel />
+
         {/* Next Event Section */}
         <section id="next-event" className="py-20 px-4">
           <div className="max-w-4xl mx-auto">
@@ -120,8 +122,6 @@ export default function LandingPage() {
 
         {/* Menu Section */}
         <MenuShowcase />
-
-        <GalleryCarousel />
 
         {/* About Section */}
         <section id="about" className="py-20 px-4 bg-jollof-surface">
