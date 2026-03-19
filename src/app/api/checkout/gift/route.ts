@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
         checkout_reference: giftTicketId,
         amount: totalPounds,
         currency: SUMUP_CURRENCY,
-        merchant_code: process.env.SUMUP_MERCHANT_CODE,
+        pay_to_email: process.env.SUMUP_PAY_TO_EMAIL,
         description: `Jollof Bash Gift Ticket for ${recipientName}`,
         redirect_url: `${origin}/gift/success?checkout_id=${giftTicketId}`,
         return_url: `${origin}/api/sumup/webhook`,

@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
         checkout_reference: bookingId,
         amount: totalPounds,
         currency: SUMUP_CURRENCY,
-        merchant_code: process.env.SUMUP_MERCHANT_CODE,
+        pay_to_email: process.env.SUMUP_PAY_TO_EMAIL,
         description: `Jollof Bash – ${seats} seat(s)`,
         redirect_url: `${origin}/book/success?checkout_id=${bookingId}`,
         return_url: `${origin}/api/sumup/webhook`,
