@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     // Store the SumUp checkout ID
     await giftRef.update({ sumupCheckoutId: checkout.id });
 
-    return NextResponse.json({ url: checkout.hosted_checkout_url });
+    return NextResponse.json({ url: `https://pay.sumup.com/b2c/${checkout.id}` });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create checkout";
     return NextResponse.json({ error: message }, { status: 500 });
