@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         pay_to_email: process.env.SUMUP_PAY_TO_EMAIL,
         description: `Jollof Bash Gift Ticket for ${recipientName}`,
         redirect_url: `${origin}/gift/success?checkout_id=${giftTicketId}`,
-        return_url: `${origin}/api/sumup/webhook`,
+        hosted_checkout: { enabled: true },
       }),
     });
 
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     // Store the SumUp checkout ID
     await giftRef.update({ sumupCheckoutId: checkout.id });
 
-    return NextResponse.json({ url: `https://pay.sumup.com/b2c/${checkout.id}` });
+    return NextResponse.json({ url: checkout.hosted_checkout_url });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create checkout";
     return NextResponse.json({ error: message }, { status: 500 });
