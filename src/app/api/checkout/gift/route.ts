@@ -7,7 +7,7 @@ import {
   SUMUP_API_URL,
   BOOKING_CODE_LENGTH,
 } from "@/lib/constants";
-import type { MealSelection, BookingAddOn } from "@/types";
+import type { BookingAddOn } from "@/types";
 
 interface DrinkLineItem {
   id: string;
@@ -31,22 +31,22 @@ export async function POST(req: NextRequest) {
     const {
       recipientName,
       recipientPhone,
-      mealSelection,
       purchaserName,
       purchaserEmail,
+      purchaserUserId,
       byob,
       drinks,
     } = body as {
       recipientName: string;
       recipientPhone: string;
-      mealSelection: MealSelection;
       purchaserName: string;
       purchaserEmail: string;
+      purchaserUserId?: string;
       byob?: boolean;
       drinks?: DrinkLineItem[];
     };
 
-    if (!recipientName || !recipientPhone || !mealSelection || !purchaserEmail) {
+    if (!recipientName || !recipientPhone || !purchaserEmail) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -89,11 +89,11 @@ export async function POST(req: NextRequest) {
 
     await giftRef.set({
       id: giftTicketId,
+      purchaserUserId: purchaserUserId || null,
       purchaserName: purchaserName || "",
       purchaserEmail,
       recipientName,
       recipientPhone,
-      mealSelection,
       addOns,
       code: giftCode,
       status: "PURCHASED",

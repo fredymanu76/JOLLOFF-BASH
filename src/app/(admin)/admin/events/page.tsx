@@ -14,9 +14,11 @@ import {
   UtensilsCrossed,
   ChevronDown,
   ChevronUp,
+  QrCode,
+  Download,
 } from "lucide-react";
-import type { JollofEvent, EventStatus } from "@/types";
-import type { MenuItem, MenuCategory } from "@/lib/constants";
+import { QRCodeSVG } from "qrcode.react";
+import type { JollofEvent, EventStatus, MenuItem, MenuCategory } from "@/types";
 import {
   formatPence,
   formatEventDate,
@@ -126,6 +128,9 @@ export default function AdminEventsPage() {
   const [menuEventId, setMenuEventId] = useState<string | null>(null);
   const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
   const [savingMenu, setSavingMenu] = useState(false);
+
+  // QR code state
+  const [qrEventId, setQrEventId] = useState<string | null>(null);
 
   // Status & delete loading states
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
@@ -785,6 +790,18 @@ export default function AdminEventsPage() {
                           <UtensilsCrossed size={16} />
                         </button>
 
+                        <button
+                          onClick={() => setQrEventId(qrEventId === ev.id ? null : ev.id)}
+                          className={`transition-colors p-2 rounded-lg ${
+                            qrEventId === ev.id
+                              ? "text-jollof-amber bg-jollof-amber/10"
+                              : "text-jollof-text-muted hover:text-jollof-amber hover:bg-jollof-amber/10"
+                          }`}
+                          aria-label="QR Code"
+                        >
+                          <QrCode size={16} />
+                        </button>
+
                         <select
                           value={ev.status}
                           onChange={(e) =>
@@ -827,6 +844,63 @@ export default function AdminEventsPage() {
                   )}
                 </div>
 
+                {/* QR Code panel */}
+                {qrEventId === ev.id && !isEditing && (
+                  <div className="border-t border-jollof-border p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <QrCode size={16} className="text-jollof-amber" />
+                        Event QR Code
+                      </h4>
+                      <button
+                        onClick={() => setQrEventId(null)}
+                        className="text-jollof-text-muted hover:text-jollof-text p-1"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="bg-white rounded-xl p-4" id={`qr-${ev.id}`}>
+                        <QRCodeSVG
+                          value={`${typeof window !== "undefined" ? window.location.origin : ""}/book?event=${ev.id}`}
+                          size={200}
+                          bgColor="#ffffff"
+                          fgColor="#1C1917"
+                        />
+                      </div>
+                      <p className="text-xs text-jollof-text-muted text-center">
+                        Scan to book seats for this event
+                      </p>
+                      <button
+                        onClick={() => {
+                          const svgEl = document.querySelector(`#qr-${ev.id} svg`);
+                          if (!svgEl) return;
+                          const canvas = document.createElement("canvas");
+                          canvas.width = 250;
+                          canvas.height = 250;
+                          const ctx = canvas.getContext("2d");
+                          if (!ctx) return;
+                          ctx.fillStyle = "#ffffff";
+                          ctx.fillRect(0, 0, 250, 250);
+                          const svgData = new XMLSerializer().serializeToString(svgEl);
+                          const img = new Image();
+                          img.onload = () => {
+                            ctx.drawImage(img, 25, 25, 200, 200);
+                            const link = document.createElement("a");
+                            link.download = `jollof-bash-qr-${ev.id}.png`;
+                            link.href = canvas.toDataURL("image/png");
+                            link.click();
+                          };
+                          img.src = "data:image/svg+xml;base64," + btoa(svgData);
+                        }}
+                        className="bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-4 py-2 rounded-lg transition-colors inline-flex items-center gap-2 text-sm"
+                      >
+                        <Download size={14} /> Download PNG
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Menu picker panel */}
                 {isMenuOpen && !isEditing && (
                   <div className="border-t border-jollof-border p-5">
@@ -851,7 +925,7 @@ export default function AdminEventsPage() {
                       <div className="space-y-4">
                         {MENU_CATEGORY_ORDER.map((cat) => {
                           const catItems = allMenuItems.filter(
-                            (m) => m.category === cat
+                            (m) => m.category === cat && (m.availability === "EVENT" || m.availability === "BOTH" || !m.availability)
                           );
                           if (catItems.length === 0) return null;
                           return (

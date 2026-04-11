@@ -41,6 +41,12 @@ export function Navbar() {
             Gallery
           </Link>
           <Link
+            href="/order"
+            className="text-jollof-amber hover:text-jollof-amber-light transition-colors font-medium"
+          >
+            Next Day Order
+          </Link>
+          <Link
             href="/login"
             className="text-jollof-text-muted hover:text-jollof-text transition-colors"
           >
@@ -53,7 +59,7 @@ export function Navbar() {
             Admin
           </Link>
           <Link
-            href="/register"
+            href="/book"
             className="bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-4 py-2 rounded-lg transition-colors"
           >
             Book Now
@@ -102,6 +108,13 @@ export function Navbar() {
             Gallery
           </Link>
           <Link
+            href="/order"
+            onClick={() => setMenuOpen(false)}
+            className="text-jollof-amber hover:text-jollof-amber-light font-medium"
+          >
+            Next Day Order
+          </Link>
+          <Link
             href="/login"
             onClick={() => setMenuOpen(false)}
             className="text-jollof-text-muted hover:text-jollof-text"
@@ -116,7 +129,7 @@ export function Navbar() {
             Admin
           </Link>
           <Link
-            href="/register"
+            href="/book"
             onClick={() => setMenuOpen(false)}
             className="bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-4 py-2 rounded-lg text-center transition-colors"
           >

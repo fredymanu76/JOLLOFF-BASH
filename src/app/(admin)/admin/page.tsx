@@ -6,25 +6,28 @@ import {
   CalendarDays,
   Ticket,
   Users,
+  ShoppingBag,
   Loader2,
 } from "lucide-react";
-import type { JollofEvent } from "@/types";
-import { formatEventDate } from "@/lib/utils";
+import type { JollofEvent, TakeawayOrder } from "@/types";
+import { formatEventDate, formatPence } from "@/lib/utils";
 
 export default function AdminDashboardPage() {
   const [nextEvent, setNextEvent] = useState<string>("Loading...");
   const [totalBookings, setTotalBookings] = useState<string>("0");
   const [totalUsers, setTotalUsers] = useState<string>("0");
+  const [todayOrders, setTodayOrders] = useState<string>("0");
+  const [takeawayRevenue, setTakeawayRevenue] = useState<string>("£0.00");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch("/api/events");
-        const data = await res.json();
-        const events: JollofEvent[] = data.items || [];
+        // Fetch event stats
+        const eventsRes = await fetch("/api/events");
+        const eventsData = await eventsRes.json();
+        const events: JollofEvent[] = eventsData.items || [];
 
-        // Find next upcoming PUBLISHED event (future dateTime, status PUBLISHED)
         const now = new Date().toISOString();
         const upcoming = events
           .filter((e) => e.status === "PUBLISHED" && e.dateTime > now)
@@ -34,7 +37,6 @@ export default function AdminDashboardPage() {
           const dt = new Date(upcoming[0].dateTime);
           setNextEvent(formatEventDate(dt));
         } else {
-          // Check if there's any published event at all (even past)
           const anyPublished = events.find((e) => e.status === "PUBLISHED");
           if (anyPublished) {
             const dt = new Date(anyPublished.dateTime);
@@ -44,14 +46,34 @@ export default function AdminDashboardPage() {
           }
         }
 
-        // Count bookings and users if we have events
-        // For now show event count context
         const publishedCount = events.filter(
           (e) => e.status === "PUBLISHED"
         ).length;
         const totalSeats = events.reduce((sum, e) => sum + e.seatsBooked, 0);
         setTotalBookings(String(totalSeats));
         setTotalUsers(String(publishedCount));
+
+        // Fetch takeaway stats
+        try {
+          const ordersRes = await fetch("/api/takeaway/orders");
+          const ordersData = await ordersRes.json();
+          const orders: TakeawayOrder[] = ordersData.orders || [];
+
+          // Today's orders
+          const today = new Date().toISOString().split("T")[0];
+          const todaysOrders = orders.filter(
+            (o) => o.date && o.date.startsWith(today) && o.orderStatus !== "CANCELLED"
+          );
+          setTodayOrders(String(todaysOrders.length));
+
+          // Total takeaway revenue (PAID+)
+          const revenue = orders
+            .filter((o) => o.paymentStatus === "PAID")
+            .reduce((sum, o) => sum + o.totalPence, 0);
+          setTakeawayRevenue(formatPence(revenue));
+        } catch {
+          // Takeaway not set up yet — keep defaults
+        }
       } catch {
         setNextEvent("Coming soon");
       } finally {
@@ -66,6 +88,8 @@ export default function AdminDashboardPage() {
     { label: "Next Event", value: nextEvent, icon: CalendarDays },
     { label: "Seats Booked", value: totalBookings, icon: Ticket },
     { label: "Published Events", value: totalUsers, icon: Users },
+    { label: "Today's Delivery Orders", value: todayOrders, icon: ShoppingBag },
+    { label: "Delivery Revenue", value: takeawayRevenue, icon: ShoppingBag },
   ];
 
   return (

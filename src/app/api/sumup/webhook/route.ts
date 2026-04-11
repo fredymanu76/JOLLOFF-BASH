@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { SUMUP_API_URL } from "@/lib/constants";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     const db = getAdminDb();
 
-    // Try bookings collection first, then giftTickets
+    // Try bookings collection first
     const bookingRef = db.collection("bookings").doc(checkout_reference);
     const bookingSnap = await bookingRef.get();
 
@@ -66,6 +67,35 @@ export async function POST(req: NextRequest) {
         });
       } else if (status === "FAILED" || status === "EXPIRED") {
         await giftRef.update({ paymentStatus: "FAILED" });
+      }
+      return NextResponse.json({}, { status: 200 });
+    }
+
+    // Check takeaway orders
+    const takeawayRef = db.collection("takeawayOrders").doc(checkout_reference);
+    const takeawaySnap = await takeawayRef.get();
+
+    if (takeawaySnap.exists) {
+      if (status === "PAID") {
+        const orderData = takeawaySnap.data();
+        await takeawayRef.update({
+          paymentStatus: "PAID",
+          orderStatus: "PAID",
+          sumupCheckoutId: checkoutId,
+        });
+
+        // Increment the time slot's currentOrders count
+        if (orderData?.timeSlotId) {
+          const slotRef = db.collection("timeSlots").doc(orderData.timeSlotId);
+          await slotRef.update({
+            currentOrders: FieldValue.increment(1),
+          });
+        }
+      } else if (status === "FAILED" || status === "EXPIRED") {
+        await takeawayRef.update({
+          paymentStatus: "FAILED",
+          orderStatus: "CANCELLED",
+        });
       }
     }
 

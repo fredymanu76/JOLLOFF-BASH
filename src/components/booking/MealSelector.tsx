@@ -6,10 +6,8 @@ import {
   MENU_STARTERS,
   MENU_MAINS,
   MENU_DESSERTS,
-  type MenuItem,
-  type MenuCategory,
 } from "@/lib/constants";
-import type { MealSelection } from "@/types";
+import type { MenuItem, MenuCategory, MealSelection } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface MealSelectorProps {

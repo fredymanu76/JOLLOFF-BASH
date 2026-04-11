@@ -27,16 +27,14 @@ export const VENUE = {
   phone: "01952 794764",
 } as const;
 
-// Menu — from the Jollof Bash flyer
-export type MenuCategory = "STARTER" | "MAIN" | "DESSERT";
+// Takeaway constants
+export const DEFAULT_DELIVERY_FEE_PENCE = 300; // £3
+export const MIN_LEAD_TIME_HOURS = 2;
+export const TAKEAWAY_ORDER_CODE_PREFIX = "TO-";
 
-export interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  category: MenuCategory;
-  emoji: string;
-}
+// Menu — from the Jollof Bash flyer
+// MenuItem type is now in types/index.ts
+import type { MenuItem } from "@/types";
 
 export const MENU_STARTERS: MenuItem[] = [
   {
@@ -45,13 +43,19 @@ export const MENU_STARTERS: MenuItem[] = [
     description: "Crispy spiced chicken wings with a West African kick",
     category: "STARTER",
     emoji: "🍗",
+    availability: "BOTH",
+    pricePence: 500,
+    active: true,
   },
   {
-    id: "starter-puff-puff",
-    name: "Puff Puff",
-    description: "Sweet fried dough balls — a beloved West African classic",
+    id: "starter-fried-yam",
+    name: "Fried Yam",
+    description: "Crispy fried yam sticks with a spicy dipping sauce",
     category: "STARTER",
-    emoji: "🧁",
+    emoji: "🍟",
+    availability: "BOTH",
+    pricePence: 450,
+    active: true,
   },
 ];
 
@@ -62,13 +66,19 @@ export const MENU_MAINS: MenuItem[] = [
     description: "The star of the show — smoky, rich, perfectly spiced tomato rice",
     category: "MAIN",
     emoji: "🍚",
+    availability: "BOTH",
+    pricePence: 800,
+    active: true,
   },
   {
-    id: "main-guinea-fowl-stew",
-    name: "Guinea Fowl Stew",
-    description: "Slow-cooked guinea fowl in a rich traditional stew",
+    id: "main-goat-stew",
+    name: "Goat Stew",
+    description: "Slow-cooked goat in a rich traditional stew",
     category: "MAIN",
     emoji: "🍲",
+    availability: "BOTH",
+    pricePence: 1000,
+    active: true,
   },
   {
     id: "main-fried-plantain",
@@ -76,6 +86,9 @@ export const MENU_MAINS: MenuItem[] = [
     description: "Golden caramelised plantain slices",
     category: "MAIN",
     emoji: "🍌",
+    availability: "BOTH",
+    pricePence: 400,
+    active: true,
   },
   {
     id: "main-fried-fish",
@@ -83,6 +96,9 @@ export const MENU_MAINS: MenuItem[] = [
     description: "Whole fried fish seasoned with African spices",
     category: "MAIN",
     emoji: "🐟",
+    availability: "BOTH",
+    pricePence: 900,
+    active: true,
   },
   {
     id: "main-garden-salad",
@@ -90,13 +106,19 @@ export const MENU_MAINS: MenuItem[] = [
     description: "Fresh mixed greens with a light dressing",
     category: "MAIN",
     emoji: "🥗",
+    availability: "BOTH",
+    pricePence: 400,
+    active: true,
   },
   {
-    id: "main-coleslaw",
-    name: "Coleslaw",
-    description: "Creamy homemade coleslaw",
+    id: "main-beans-stew",
+    name: "Beans Stew",
+    description: "Hearty black-eyed beans in a rich tomato stew",
     category: "MAIN",
-    emoji: "🥬",
+    emoji: "🥘",
+    availability: "BOTH",
+    pricePence: 700,
+    active: true,
   },
   {
     id: "main-shito",
@@ -104,6 +126,9 @@ export const MENU_MAINS: MenuItem[] = [
     description: "Ghanaian hot pepper sauce — a fiery condiment",
     category: "MAIN",
     emoji: "🌶️",
+    availability: "BOTH",
+    pricePence: 300,
+    active: true,
   },
 ];
 
@@ -114,6 +139,9 @@ export const MENU_DESSERTS: MenuItem[] = [
     description: "A cool finish to your West African feast",
     category: "DESSERT",
     emoji: "🍨",
+    availability: "BOTH",
+    pricePence: 400,
+    active: true,
   },
   {
     id: "dessert-fruit-platter",
@@ -121,6 +149,9 @@ export const MENU_DESSERTS: MenuItem[] = [
     description: "Seasonal tropical fruits beautifully presented",
     category: "DESSERT",
     emoji: "🍉",
+    availability: "BOTH",
+    pricePence: 500,
+    active: true,
   },
 ];
 

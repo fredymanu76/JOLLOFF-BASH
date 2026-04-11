@@ -7,7 +7,7 @@ import {
   SUMUP_API_URL,
   BOOKING_CODE_LENGTH,
 } from "@/lib/constants";
-import type { MealSelection, BookingAddOn } from "@/types";
+import type { BookingAddOn } from "@/types";
 
 interface DrinkLineItem {
   id: string;
@@ -28,16 +28,18 @@ function generateBookingCode(): string {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { seats, mealSelections, userName, userEmail, byob, drinks } = body as {
+    const { seats, userName, userEmail, userId, byob, drinks, dietaryNotes, eventId } = body as {
       seats: number;
-      mealSelections: MealSelection[];
       userName: string;
       userEmail: string;
+      userId?: string;
       byob?: boolean;
       drinks?: DrinkLineItem[];
+      dietaryNotes?: string;
+      eventId?: string;
     };
 
-    if (!seats || !mealSelections || !userEmail) {
+    if (!seats || !userEmail) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -82,10 +84,10 @@ export async function POST(req: NextRequest) {
 
     await bookingRef.set({
       id: bookingId,
+      userId: userId || null,
       userName: userName || "",
       userEmail,
       seats,
-      mealSelections,
       addOns,
       discounts: [],
       subtotalPence: seats * SEAT_PRICE_PENCE,
@@ -94,6 +96,8 @@ export async function POST(req: NextRequest) {
       paymentStatus: "PENDING",
       bookingCode,
       attended: false,
+      dietaryNotes: dietaryNotes || "",
+      eventId: eventId || null,
       createdAt: new Date().toISOString(),
     });
 

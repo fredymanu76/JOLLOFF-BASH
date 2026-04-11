@@ -2,6 +2,92 @@
 
 export type UserRole = "USER" | "ADMIN";
 
+// Menu availability tagging for dual-system
+export type MenuItemAvailability = "EVENT" | "TAKEAWAY" | "BOTH";
+export type MenuCategory = "STARTER" | "MAIN" | "DESSERT";
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  category: MenuCategory;
+  emoji: string;
+  availability: MenuItemAvailability;
+  pricePence?: number;
+  active: boolean;
+}
+
+// Takeaway types
+export type FulfilmentType = "PICKUP" | "DELIVERY";
+
+export type TakeawayOrderStatus =
+  | "PENDING_PAYMENT"
+  | "PAID"
+  | "PREPARING"
+  | "READY"
+  | "COLLECTED"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "CANCELLED"
+  | "REFUNDED";
+
+export interface TakeawayOrderItem {
+  menuItemId: string;
+  name: string;
+  quantity: number;
+  unitPricePence: number;
+}
+
+export interface DeliveryAddress {
+  line1: string;
+  line2?: string;
+  city: string;
+  postcode: string;
+  phone: string;
+}
+
+export interface TakeawayOrder {
+  id: string;
+  userId?: string;
+  userName: string;
+  userEmail: string;
+  items: TakeawayOrderItem[];
+  fulfilmentType: FulfilmentType;
+  date: string;
+  timeSlotId: string;
+  timeSlotLabel: string;
+  deliveryAddress?: DeliveryAddress;
+  deliveryFeePence: number;
+  subtotalPence: number;
+  totalPence: number;
+  paymentStatus: PaymentStatus;
+  orderStatus: TakeawayOrderStatus;
+  orderCode: string;
+  dietaryNotes?: string;
+  sumupCheckoutId?: string;
+  createdAt: string;
+}
+
+export interface TimeSlot {
+  id: string;
+  dayOfWeek?: number;
+  specificDate?: string;
+  label: string;
+  startTime: string;
+  endTime: string;
+  maxOrders: number;
+  currentOrders: number;
+  active: boolean;
+}
+
+export interface TakeawaySettings {
+  deliveryFeePence: number;
+  deliveryEnabled: boolean;
+  pickupEnabled: boolean;
+  leadTimeHours: number;
+  minimumOrderPence?: number;
+}
+
 export interface User {
   uid: string;
   email: string;
@@ -38,7 +124,7 @@ export interface JollofEvent {
   createdAt: string;
 }
 
-// Meal selections
+/** @deprecated Kept for backward compatibility with historical booking data */
 export interface MealSelection {
   starter: string;  // menu item id
   mains: string[];  // menu item ids (buffet style — pick multiple)
@@ -63,7 +149,7 @@ export interface BookingDiscount {
 
 export interface Booking {
   id: string;
-  userId: string;
+  userId?: string;
   userName: string;
   userEmail: string;
   eventId: string;
@@ -77,7 +163,8 @@ export interface Booking {
   sumupCheckoutId?: string;
   bookingCode: string;
   attended: boolean;
-  mealSelections: MealSelection[];  // one per seat
+  /** @deprecated No longer written for new bookings — event food is set menu */
+  mealSelections?: MealSelection[];
   dietaryNotes?: string;
   createdAt: string;
 }
@@ -86,7 +173,7 @@ export type GiftTicketStatus = "PURCHASED" | "SENT" | "REDEEMED" | "EXPIRED";
 
 export interface GiftTicket {
   id: string;
-  purchaserUserId: string;
+  purchaserUserId?: string;
   purchaserName: string;
   eventId: string;
   code: string;
@@ -96,7 +183,8 @@ export interface GiftTicket {
   recipientEmail?: string;
   redeemedByUserId?: string;
   seats: number;
-  mealSelection: MealSelection;
+  /** @deprecated No longer written for new gifts — event food is set menu */
+  mealSelection?: MealSelection;
   pricePaidPence: number;
   sumupCheckoutId?: string;
   createdAt: string;

@@ -7,8 +7,12 @@ import {
   Trash2,
   Loader2,
   AlertTriangle,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
-import type { MenuCategory, MenuItem } from "@/lib/constants";
+import type { MenuItem, MenuCategory, MenuItemAvailability } from "@/types";
+import { formatPence } from "@/lib/utils";
 
 const CATEGORY_LABELS: Record<MenuCategory, string> = {
   STARTER: "Starters",
@@ -18,17 +22,32 @@ const CATEGORY_LABELS: Record<MenuCategory, string> = {
 
 const CATEGORY_ORDER: MenuCategory[] = ["STARTER", "MAIN", "DESSERT"];
 
+const AVAILABILITY_LABELS: Record<MenuItemAvailability, string> = {
+  EVENT: "Event Only",
+  TAKEAWAY: "Takeaway Only",
+  BOTH: "Both",
+};
+
+const AVAILABILITY_COLORS: Record<MenuItemAvailability, string> = {
+  EVENT: "bg-amber-600/20 text-amber-400 border-amber-500/40",
+  TAKEAWAY: "bg-green-600/20 text-green-400 border-green-500/40",
+  BOTH: "bg-blue-600/20 text-blue-400 border-blue-500/40",
+};
+
 const EMOJI_SUGGESTIONS: Record<MenuCategory, string[]> = {
-  STARTER: ["🍗", "🧁", "🥟", "🍤", "🫓"],
-  MAIN: ["🍚", "🍲", "🍌", "🐟", "🥗", "🥬", "🌶️", "🍖", "🥘"],
+  STARTER: ["🍗", "🍟", "🥟", "🍤", "🫓"],
+  MAIN: ["🍚", "🍲", "🍌", "🐟", "🥗", "🥘", "🌶️", "🍖"],
   DESSERT: ["🍨", "🍉", "🎂", "🍮", "🧁"],
 };
+
+type FilterTab = "ALL" | "EVENT" | "TAKEAWAY";
 
 export default function AdminMenuPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<string>("");
   const [error, setError] = useState("");
+  const [filterTab, setFilterTab] = useState<FilterTab>("ALL");
 
   // Add form state
   const [showAdd, setShowAdd] = useState(false);
@@ -36,8 +55,21 @@ export default function AdminMenuPage() {
   const [addDescription, setAddDescription] = useState("");
   const [addCategory, setAddCategory] = useState<MenuCategory>("STARTER");
   const [addEmoji, setAddEmoji] = useState("🍽️");
+  const [addAvailability, setAddAvailability] = useState<MenuItemAvailability>("BOTH");
+  const [addPrice, setAddPrice] = useState("");
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState<MenuCategory>("STARTER");
+  const [editEmoji, setEditEmoji] = useState("");
+  const [editAvailability, setEditAvailability] = useState<MenuItemAvailability>("BOTH");
+  const [editPrice, setEditPrice] = useState("");
+  const [editActive, setEditActive] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const fetchMenu = useCallback(async () => {
     try {
@@ -64,6 +96,8 @@ export default function AdminMenuPage() {
     setError("");
 
     try {
+      const pricePence = addPrice ? Math.round(parseFloat(addPrice) * 100) : undefined;
+
       const res = await fetch("/api/menu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,17 +106,20 @@ export default function AdminMenuPage() {
           description: addDescription.trim(),
           category: addCategory,
           emoji: addEmoji,
+          availability: addAvailability,
+          pricePence,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // Add to local state
       setItems((prev) => [...prev, data.item]);
       setAddName("");
       setAddDescription("");
       setAddEmoji("🍽️");
+      setAddAvailability("BOTH");
+      setAddPrice("");
       setShowAdd(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add item");
@@ -113,11 +150,71 @@ export default function AdminMenuPage() {
     }
   }
 
+  function startEdit(item: MenuItem) {
+    setEditingId(item.id);
+    setEditName(item.name);
+    setEditDescription(item.description);
+    setEditCategory(item.category);
+    setEditEmoji(item.emoji);
+    setEditAvailability(item.availability || "BOTH");
+    setEditPrice(item.pricePence ? (item.pricePence / 100).toFixed(2) : "");
+    setEditActive(item.active !== false);
+  }
+
+  async function handleSaveEdit(id: string) {
+    setSaving(true);
+    setError("");
+
+    try {
+      const pricePence = editPrice ? Math.round(parseFloat(editPrice) * 100) : undefined;
+
+      const res = await fetch("/api/menu", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          name: editName.trim(),
+          description: editDescription.trim(),
+          category: editCategory,
+          emoji: editEmoji,
+          availability: editAvailability,
+          pricePence,
+          active: editActive,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? (data.item as MenuItem) : item
+        )
+      );
+      setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save item");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Filter items by tab
+  const filteredItems = items.filter((item) => {
+    if (filterTab === "ALL") return true;
+    if (filterTab === "EVENT") return item.availability === "EVENT" || item.availability === "BOTH";
+    if (filterTab === "TAKEAWAY") return item.availability === "TAKEAWAY" || item.availability === "BOTH";
+    return true;
+  });
+
   const grouped = CATEGORY_ORDER.map((cat) => ({
     category: cat,
     label: CATEGORY_LABELS[cat],
-    items: items.filter((item) => item.category === cat),
+    items: filteredItems.filter((item) => item.category === cat),
   }));
+
+  const inputClass =
+    "w-full bg-jollof-bg border border-jollof-border rounded-lg px-4 py-2.5 text-jollof-text placeholder:text-jollof-text-muted focus:border-jollof-amber focus:outline-none";
 
   return (
     <div>
@@ -127,7 +224,7 @@ export default function AdminMenuPage() {
           <div>
             <h1 className="text-2xl font-bold">Menu Management</h1>
             <p className="text-xs text-jollof-text-muted">
-              Changes reflect on the landing page and booking flows
+              Manage items for events and takeaway
             </p>
           </div>
         </div>
@@ -137,6 +234,23 @@ export default function AdminMenuPage() {
         >
           <Plus size={16} /> Add Item
         </button>
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-2 mb-6">
+        {(["ALL", "EVENT", "TAKEAWAY"] as FilterTab[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setFilterTab(tab)}
+            className={`text-xs px-4 py-2 rounded-full font-medium transition-colors ${
+              filterTab === tab
+                ? "bg-jollof-amber text-jollof-bg"
+                : "bg-jollof-surface text-jollof-text-muted hover:text-jollof-text"
+            }`}
+          >
+            {tab === "ALL" ? "All Items" : tab === "EVENT" ? "Event" : "Takeaway"}
+          </button>
+        ))}
       </div>
 
       {source === "defaults" && (
@@ -166,22 +280,18 @@ export default function AdminMenuPage() {
           <form onSubmit={handleAdd} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Name
-                </label>
+                <label className="block text-sm font-medium mb-1">Name</label>
                 <input
                   type="text"
                   required
                   value={addName}
                   onChange={(e) => setAddName(e.target.value)}
-                  className="w-full bg-jollof-bg border border-jollof-border rounded-lg px-4 py-2.5 text-jollof-text placeholder:text-jollof-text-muted focus:border-jollof-amber focus:outline-none"
+                  className={inputClass}
                   placeholder="e.g. Suya Skewers"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Category
-                </label>
+                <label className="block text-sm font-medium mb-1">Category</label>
                 <select
                   value={addCategory}
                   onChange={(e) => {
@@ -189,7 +299,7 @@ export default function AdminMenuPage() {
                     setAddCategory(cat);
                     setAddEmoji(EMOJI_SUGGESTIONS[cat][0]);
                   }}
-                  className="w-full bg-jollof-bg border border-jollof-border rounded-lg px-4 py-2.5 text-jollof-text focus:border-jollof-amber focus:outline-none"
+                  className={inputClass}
                 >
                   {CATEGORY_ORDER.map((cat) => (
                     <option key={cat} value={cat}>
@@ -201,16 +311,47 @@ export default function AdminMenuPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Description
-              </label>
+              <label className="block text-sm font-medium mb-1">Description</label>
               <input
                 type="text"
                 value={addDescription}
                 onChange={(e) => setAddDescription(e.target.value)}
-                className="w-full bg-jollof-bg border border-jollof-border rounded-lg px-4 py-2.5 text-jollof-text placeholder:text-jollof-text-muted focus:border-jollof-amber focus:outline-none"
+                className={inputClass}
                 placeholder="Short description of the dish"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Availability</label>
+                <select
+                  value={addAvailability}
+                  onChange={(e) => setAddAvailability(e.target.value as MenuItemAvailability)}
+                  className={inputClass}
+                >
+                  <option value="BOTH">Both (Event + Takeaway)</option>
+                  <option value="EVENT">Event Only</option>
+                  <option value="TAKEAWAY">Takeaway Only</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Price (&pound;) {addAvailability !== "EVENT" && <span className="text-jollof-amber">*</span>}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={addPrice}
+                  onChange={(e) => setAddPrice(e.target.value)}
+                  className={inputClass}
+                  placeholder="e.g. 8.00"
+                  required={addAvailability !== "EVENT"}
+                />
+                <p className="text-xs text-jollof-text-muted mt-1">
+                  Required for takeaway items
+                </p>
+              </div>
             </div>
 
             <div>
@@ -298,34 +439,171 @@ export default function AdminMenuPage() {
                 </p>
               ) : (
                 <div className="grid gap-2">
-                  {catItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-jollof-surface rounded-xl p-4 border border-jollof-border flex items-center gap-4"
-                    >
-                      <span className="text-3xl">{item.emoji}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold">{item.name}</p>
-                        {item.description && (
-                          <p className="text-sm text-jollof-text-muted truncate">
-                            {item.description}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        disabled={deleting === item.id}
-                        className="text-jollof-text-muted hover:text-jollof-red transition-colors p-2 rounded-lg hover:bg-jollof-red/10 disabled:opacity-50"
-                        aria-label={`Remove ${item.name}`}
+                  {catItems.map((item) => {
+                    const isEditing = editingId === item.id;
+
+                    if (isEditing) {
+                      return (
+                        <div
+                          key={item.id}
+                          className="bg-jollof-surface rounded-xl p-4 border border-jollof-amber"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-semibold text-sm">Edit Item</h3>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="text-jollof-text-muted hover:text-jollof-text p-1"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <input
+                                type="text"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className={inputClass}
+                                placeholder="Name"
+                              />
+                              <select
+                                value={editCategory}
+                                onChange={(e) => setEditCategory(e.target.value as MenuCategory)}
+                                className={inputClass}
+                              >
+                                {CATEGORY_ORDER.map((cat) => (
+                                  <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+                                ))}
+                              </select>
+                              <select
+                                value={editAvailability}
+                                onChange={(e) => setEditAvailability(e.target.value as MenuItemAvailability)}
+                                className={inputClass}
+                              >
+                                <option value="BOTH">Both</option>
+                                <option value="EVENT">Event Only</option>
+                                <option value="TAKEAWAY">Takeaway Only</option>
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <input
+                                type="text"
+                                value={editDescription}
+                                onChange={(e) => setEditDescription(e.target.value)}
+                                className={inputClass}
+                                placeholder="Description"
+                              />
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={editPrice}
+                                onChange={(e) => setEditPrice(e.target.value)}
+                                className={inputClass}
+                                placeholder="Price (£)"
+                              />
+                              <input
+                                type="text"
+                                value={editEmoji}
+                                onChange={(e) => setEditEmoji(e.target.value)}
+                                className={inputClass}
+                                placeholder="Emoji"
+                                maxLength={2}
+                              />
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editActive}
+                                  onChange={(e) => setEditActive(e.target.checked)}
+                                  className="accent-jollof-amber"
+                                />
+                                Active
+                              </label>
+                              <div className="ml-auto flex gap-2">
+                                <button
+                                  onClick={() => handleSaveEdit(item.id)}
+                                  disabled={saving}
+                                  className="bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-4 py-1.5 rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-2 text-sm"
+                                >
+                                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingId(null)}
+                                  className="border border-jollof-border hover:border-jollof-amber text-jollof-text px-3 py-1.5 rounded-lg transition-colors text-sm"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`bg-jollof-surface rounded-xl p-4 border border-jollof-border flex items-center gap-4 ${
+                          item.active === false ? "opacity-50" : ""
+                        }`}
                       >
-                        {deleting === item.id ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <Trash2 size={16} />
-                        )}
-                      </button>
-                    </div>
-                  ))}
+                        <span className="text-3xl">{item.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="font-semibold">{item.name}</p>
+                            <span
+                              className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+                                AVAILABILITY_COLORS[item.availability || "BOTH"]
+                              }`}
+                            >
+                              {AVAILABILITY_LABELS[item.availability || "BOTH"]}
+                            </span>
+                            {item.active === false && (
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-red-600/20 text-red-400 border-red-500/40">
+                                Inactive
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {item.description && (
+                              <p className="text-sm text-jollof-text-muted truncate">
+                                {item.description}
+                              </p>
+                            )}
+                            {item.pricePence && (
+                              <span className="text-sm font-semibold text-jollof-amber shrink-0">
+                                {formatPence(item.pricePence)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => startEdit(item)}
+                            className="text-jollof-text-muted hover:text-jollof-amber transition-colors p-2 rounded-lg hover:bg-jollof-amber/10"
+                            aria-label={`Edit ${item.name}`}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            disabled={deleting === item.id}
+                            className="text-jollof-text-muted hover:text-jollof-red transition-colors p-2 rounded-lg hover:bg-jollof-red/10 disabled:opacity-50"
+                            aria-label={`Remove ${item.name}`}
+                          >
+                            {deleting === item.id ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

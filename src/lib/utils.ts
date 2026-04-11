@@ -4,6 +4,8 @@ import {
   BOOKING_CODE_LENGTH,
   EVENT_START_HOUR,
   EVENT_START_MINUTE,
+  TAKEAWAY_ORDER_CODE_PREFIX,
+  MIN_LEAD_TIME_HOURS,
 } from "./constants";
 
 /**
@@ -140,6 +142,39 @@ export function getCountdown(targetDate: Date): {
     seconds: Math.floor((diff / 1000) % 60),
     isPast: false,
   };
+}
+
+/**
+ * Generate a takeaway order code.
+ */
+export function generateOrderCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = TAKEAWAY_ORDER_CODE_PREFIX;
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+/**
+ * Format a date for takeaway order display.
+ */
+export function formatOrderDate(date: Date): string {
+  return date.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
+ * Check if a date is within the required lead time from now.
+ */
+export function isWithinLeadTime(date: Date, leadTimeHours: number = MIN_LEAD_TIME_HOURS): boolean {
+  const now = new Date();
+  const minDate = new Date(now.getTime() + leadTimeHours * 60 * 60 * 1000);
+  return date >= minDate;
 }
 
 /**

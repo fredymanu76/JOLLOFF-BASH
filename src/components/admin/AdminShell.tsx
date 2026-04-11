@@ -14,6 +14,9 @@ import {
   LogOut,
   Menu,
   X,
+  ShoppingBag,
+  Clock,
+  Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +31,10 @@ const navItems = [
   { href: "/admin/drinks", label: "Drinks Menu", icon: Wine },
   { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
   { href: "/admin/broadcasts", label: "Broadcasts", icon: Megaphone },
+  // Next Day Order section
+  { href: "/admin/takeaway-orders", label: "Next Day Orders", icon: ShoppingBag },
+  { href: "/admin/timeslots", label: "Delivery Slots", icon: Clock },
+  { href: "/admin/takeaway-settings", label: "Delivery Settings", icon: Settings },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -73,21 +80,29 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           )}
         >
           <nav className="px-4 flex flex-col gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
-                  pathname === item.href
-                    ? "bg-jollof-amber/10 text-jollof-amber font-semibold"
-                    : "text-jollof-text-muted hover:text-jollof-text hover:bg-jollof-bg"
+            {navItems.map((item, index) => (
+              <div key={item.href}>
+                {index === 8 && (
+                  <div className="border-t border-jollof-border my-2 pt-2">
+                    <p className="text-[10px] font-semibold text-jollof-text-muted uppercase tracking-wider px-3 mb-1">
+                      Next Day Orders
+                    </p>
+                  </div>
                 )}
-              >
-                <item.icon size={18} />
-                {item.label}
-              </Link>
+                <Link
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                    pathname === item.href
+                      ? "bg-jollof-amber/10 text-jollof-amber font-semibold"
+                      : "text-jollof-text-muted hover:text-jollof-text hover:bg-jollof-bg"
+                  )}
+                >
+                  <item.icon size={18} />
+                  {item.label}
+                </Link>
+              </div>
             ))}
           </nav>
         </aside>

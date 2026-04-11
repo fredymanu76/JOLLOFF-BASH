@@ -7,6 +7,8 @@ import {
   Ticket,
   Gift,
   TicketCheck,
+  ShoppingBag,
+  Package,
   LogOut,
   Menu,
   X,
@@ -20,6 +22,8 @@ const navItems = [
   { href: "/book", label: "Book Seats", icon: CalendarDays },
   { href: "/gift", label: "Gift a Seat", icon: Gift },
   { href: "/redeem", label: "Redeem Gift", icon: TicketCheck },
+  { href: "/order", label: "Next Day Order", icon: ShoppingBag },
+  { href: "/my-orders", label: "My Orders", icon: Package },
 ];
 
 export function CustomerShell({ children }: { children: React.ReactNode }) {

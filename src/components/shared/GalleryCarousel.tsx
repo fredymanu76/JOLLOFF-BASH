@@ -25,7 +25,7 @@ export function GalleryCarousel() {
   const scrollItems = [...items, ...items];
 
   return (
-    <section id="gallery" className="py-20 px-4">
+    <section id="gallery" className="pt-20 pb-8 px-4">
       <div className="max-w-6xl mx-auto">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-2">
           The <span className="text-jollof-amber">Gallery</span>

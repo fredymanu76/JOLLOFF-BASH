@@ -7,12 +7,20 @@
   --color-jollof-red: #DC2626;
   --color-jollof-red-light: #EF4444;
   --color-jollof-red-dark: #B91C1C;
-  --color-jollof-bg: #1C1917;
-  --color-jollof-surface: #292524;
-  --color-jollof-surface-light: #44403C;
-  --color-jollof-text: #FAFAF9;
-  --color-jollof-text-muted: #A8A29E;
-  --color-jollof-border: #44403C;
+  /* ORIGINAL (revert to this):
+     --color-jollof-bg: #1C1917;
+     --color-jollof-surface: #292524;
+     --color-jollof-surface-light: #44403C;
+     --color-jollof-text: #FAFAF9;
+     --color-jollof-text-muted: #A8A29E;
+     --color-jollof-border: #44403C;
+  */
+  --color-jollof-bg: #1B4332;
+  --color-jollof-surface: #245740;
+  --color-jollof-surface-light: #357A54;
+  --color-jollof-text: #F0FFF4;
+  --color-jollof-text-muted: #A7D7B8;
+  --color-jollof-border: #357A54;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

@@ -11,8 +11,8 @@ import {
   Loader2,
   MapPin,
   Wine,
+  UtensilsCrossed,
 } from "lucide-react";
-import { MealSelector, MealSummary } from "@/components/booking/MealSelector";
 import {
   getNextEventDate,
   formatEventDate,
@@ -26,9 +26,10 @@ import {
   VENUE,
 } from "@/lib/constants";
 import { useAuth } from "@/hooks/useAuth";
-import type { MealSelection, AddOn } from "@/types";
+import { useSearchParams } from "next/navigation";
+import type { AddOn, MenuItem } from "@/types";
 
-type Step = "seats" | "meals" | "drinks" | "review";
+type Step = "seats" | "drinks" | "review";
 type DrinkOption = "none" | "byob" | "order";
 
 interface DrinkSelection {
@@ -38,18 +39,25 @@ interface DrinkSelection {
   unitPricePence: number;
 }
 
-const emptyMeal: MealSelection = { starter: "", mains: [], dessert: "" };
-
 export default function BookPage() {
   const { user, profile } = useAuth();
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get("event");
+
   const [step, setStep] = useState<Step>("seats");
   const [seats, setSeats] = useState(1);
-  const [currentSeat, setCurrentSeat] = useState(0);
-  const [mealSelections, setMealSelections] = useState<MealSelection[]>([
-    { ...emptyMeal },
-  ]);
+  const [dietaryNotes, setDietaryNotes] = useState("");
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
+
+  // Guest checkout fields (when not logged in)
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+
+  // Set menu items for display
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loadingMenu, setLoadingMenu] = useState(true);
 
   // Drinks state
   const [drinkOption, setDrinkOption] = useState<DrinkOption>("none");
@@ -68,6 +76,22 @@ export default function BookPage() {
   );
   const totalPence =
     SEAT_PRICE_PENCE * seats + corkagePence + drinksTotalPence;
+
+  // Fetch event menu items
+  useEffect(() => {
+    async function fetchMenu() {
+      try {
+        const res = await fetch("/api/menu?availability=EVENT");
+        const data = await res.json();
+        setMenuItems(data.items || []);
+      } catch {
+        // Keep empty
+      } finally {
+        setLoadingMenu(false);
+      }
+    }
+    fetchMenu();
+  }, []);
 
   // Fetch available drinks once when entering drinks step
   useEffect(() => {
@@ -100,18 +124,6 @@ export default function BookPage() {
   function handleSeatsChange(newSeats: number) {
     const clamped = Math.max(1, Math.min(MAX_SEATS_PER_BOOKING, newSeats));
     setSeats(clamped);
-    const newSelections = [...mealSelections];
-    while (newSelections.length < clamped) {
-      newSelections.push({ ...emptyMeal });
-    }
-    setMealSelections(newSelections.slice(0, clamped));
-    if (currentSeat >= clamped) setCurrentSeat(clamped - 1);
-  }
-
-  function updateMealForSeat(index: number, selection: MealSelection) {
-    const newSelections = [...mealSelections];
-    newSelections[index] = selection;
-    setMealSelections(newSelections);
   }
 
   function updateDrinkQuantity(drinkId: string, delta: number) {
@@ -124,11 +136,12 @@ export default function BookPage() {
     );
   }
 
-  const allMealsComplete = mealSelections
-    .slice(0, seats)
-    .every((m) => m.starter && m.mains.length > 0 && m.dessert);
-
   const selectedDrinks = drinkSelections.filter((d) => d.quantity > 0);
+
+  // Group menu items by category for display
+  const starters = menuItems.filter((i) => i.category === "STARTER");
+  const mains = menuItems.filter((i) => i.category === "MAIN");
+  const desserts = menuItems.filter((i) => i.category === "DESSERT");
 
   async function handlePay() {
     setError("");
@@ -140,12 +153,14 @@ export default function BookPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           seats,
-          mealSelections: mealSelections.slice(0, seats),
-          userName: profile?.name || user?.email || "",
-          userEmail: user?.email || "",
+          userName: profile?.name || user?.email || guestName,
+          userEmail: user?.email || guestEmail,
+          userId: user?.uid || undefined,
           byob: isByob,
           drinks:
             drinkOption === "order" ? selectedDrinks : [],
+          dietaryNotes: dietaryNotes.trim() || undefined,
+          eventId: eventId || undefined,
         }),
       });
 
@@ -193,13 +208,60 @@ export default function BookPage() {
         </div>
       </div>
 
+      {/* Set Menu Display */}
+      {!loadingMenu && menuItems.length > 0 && (
+        <div className="bg-jollof-surface rounded-xl p-4 border border-jollof-border mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <UtensilsCrossed size={16} className="text-jollof-amber" />
+            <h3 className="font-semibold text-sm">Set Menu</h3>
+            <span className="text-xs text-jollof-text-muted ml-auto">
+              Food served Mezze/Buffet style
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {starters.length > 0 && (
+              <div>
+                <p className="text-xs text-jollof-amber font-semibold mb-1">Starters</p>
+                {starters.map((item) => (
+                  <p key={item.id} className="text-sm text-jollof-text-muted">
+                    {item.emoji} {item.name}
+                  </p>
+                ))}
+              </div>
+            )}
+            {mains.length > 0 && (
+              <div>
+                <p className="text-xs text-jollof-amber font-semibold mb-1">Mains</p>
+                {mains.map((item) => (
+                  <p key={item.id} className="text-sm text-jollof-text-muted">
+                    {item.emoji} {item.name}
+                  </p>
+                ))}
+              </div>
+            )}
+            {desserts.length > 0 && (
+              <div>
+                <p className="text-xs text-jollof-amber font-semibold mb-1">Desserts</p>
+                {desserts.map((item) => (
+                  <p key={item.id} className="text-sm text-jollof-text-muted">
+                    {item.emoji} {item.name}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-jollof-amber/70 mt-2">
+            No payment at the gate &mdash; all inclusive with your seat
+          </p>
+        </div>
+      )}
+
       {/* Step indicators */}
       <div className="flex items-center gap-2 mb-6">
         {[
           { key: "seats", label: "1. Seats" },
-          { key: "meals", label: "2. Meals" },
-          { key: "drinks", label: "3. Drinks" },
-          { key: "review", label: "4. Pay" },
+          { key: "drinks", label: "2. Drinks" },
+          { key: "review", label: "3. Pay" },
         ].map(({ key, label }) => (
           <div
             key={key}
@@ -247,6 +309,20 @@ export default function BookPage() {
             </button>
           </div>
 
+          {/* Dietary notes */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-1">
+              Dietary notes / allergies (optional)
+            </label>
+            <input
+              type="text"
+              value={dietaryNotes}
+              onChange={(e) => setDietaryNotes(e.target.value)}
+              className="w-full bg-jollof-bg border border-jollof-border rounded-lg px-4 py-2.5 text-jollof-text placeholder:text-jollof-text-muted focus:border-jollof-amber focus:outline-none"
+              placeholder="e.g. nut allergy, vegetarian"
+            />
+          </div>
+
           <div className="bg-jollof-bg rounded-lg p-4 border border-jollof-border mb-6">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-jollof-text-muted">
@@ -261,80 +337,20 @@ export default function BookPage() {
               </span>
             </div>
             <p className="text-xs text-jollof-text-muted mt-2">
-              Drinks &amp; BYOB corkage options in step 3
+              Drinks &amp; BYOB corkage options in step 2
             </p>
           </div>
 
           <button
-            onClick={() => setStep("meals")}
+            onClick={() => setStep("drinks")}
             className="w-full bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold py-2.5 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
           >
-            Choose Meals <ArrowRight size={16} />
+            Drinks <ArrowRight size={16} />
           </button>
         </div>
       )}
 
-      {/* Step 2: Meal selection per seat */}
-      {step === "meals" && (
-        <div className="bg-jollof-surface rounded-xl p-6 border border-jollof-border">
-          {seats > 1 && (
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-              {Array.from({ length: seats }).map((_, i) => {
-                const meal = mealSelections[i];
-                const complete =
-                  meal && meal.starter && meal.mains.length > 0 && meal.dessert;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentSeat(i)}
-                    className={`text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition-colors ${
-                      currentSeat === i
-                        ? "bg-jollof-amber text-jollof-bg"
-                        : complete
-                          ? "bg-jollof-amber/20 text-jollof-amber"
-                          : "bg-jollof-bg text-jollof-text-muted"
-                    }`}
-                  >
-                    Seat {i + 1} {complete ? "\u2713" : ""}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <MealSelector
-            label={seats > 1 ? `Seat ${currentSeat + 1} meal` : undefined}
-            value={mealSelections[currentSeat]}
-            onChange={(sel) => updateMealForSeat(currentSeat, sel)}
-          />
-
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={() => setStep("seats")}
-              className="border border-jollof-border hover:border-jollof-amber text-jollof-text px-4 py-2.5 rounded-lg text-sm transition-colors inline-flex items-center gap-2"
-            >
-              <ArrowLeft size={16} /> Back
-            </button>
-            {seats > 1 && currentSeat < seats - 1 && (
-              <button
-                onClick={() => setCurrentSeat(currentSeat + 1)}
-                className="border border-jollof-amber text-jollof-amber px-4 py-2.5 rounded-lg text-sm transition-colors inline-flex items-center gap-2"
-              >
-                Next Seat <ArrowRight size={16} />
-              </button>
-            )}
-            <button
-              disabled={!allMealsComplete}
-              onClick={() => setStep("drinks")}
-              className="bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 inline-flex items-center gap-2 ml-auto"
-            >
-              Drinks <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 3: Drinks selection */}
+      {/* Step 2: Drinks selection */}
       {step === "drinks" && (
         <div className="bg-jollof-surface rounded-xl p-6 border border-jollof-border">
           <div className="flex items-center gap-2 mb-4">
@@ -421,7 +437,7 @@ export default function BookPage() {
             </label>
           </div>
 
-          {/* Drink quantity selectors — shown when "order" is selected */}
+          {/* Drink quantity selectors */}
           {drinkOption === "order" && (
             <div className="mb-6">
               {loadingDrinks ? (
@@ -510,7 +526,7 @@ export default function BookPage() {
 
           <div className="flex gap-3">
             <button
-              onClick={() => setStep("meals")}
+              onClick={() => setStep("seats")}
               className="border border-jollof-border hover:border-jollof-amber text-jollof-text px-4 py-2.5 rounded-lg text-sm transition-colors inline-flex items-center gap-2"
             >
               <ArrowLeft size={16} /> Back
@@ -525,23 +541,64 @@ export default function BookPage() {
         </div>
       )}
 
-      {/* Step 4: Review & Pay */}
+      {/* Step 3: Review & Pay */}
       {step === "review" && (
         <div className="bg-jollof-surface rounded-xl p-6 border border-jollof-border">
           <h2 className="font-semibold text-lg mb-4">Review Your Booking</h2>
 
-          <div className="space-y-4 mb-6">
-            {mealSelections.slice(0, seats).map((meal, i) => (
-              <div
-                key={i}
-                className="bg-jollof-bg rounded-lg p-4 border border-jollof-border"
-              >
-                <p className="text-xs text-jollof-amber font-semibold uppercase tracking-wide mb-2">
-                  {seats > 1 ? `Seat ${i + 1}` : "Your Meal"}
-                </p>
-                <MealSummary selection={meal} />
+          {/* Guest details (when not logged in) */}
+          {!user && (
+            <div className="bg-jollof-bg rounded-lg p-4 border border-jollof-amber/30 mb-4">
+              <p className="text-xs text-jollof-amber font-semibold uppercase tracking-wide mb-3">
+                Your Details
+              </p>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Full name *"
+                  className="w-full bg-jollof-surface border border-jollof-border rounded-lg px-4 py-2.5 text-jollof-text placeholder:text-jollof-text-muted focus:border-jollof-amber focus:outline-none"
+                />
+                <input
+                  type="email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  placeholder="Email address *"
+                  className="w-full bg-jollof-surface border border-jollof-border rounded-lg px-4 py-2.5 text-jollof-text placeholder:text-jollof-text-muted focus:border-jollof-amber focus:outline-none"
+                />
+                <input
+                  type="tel"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="Phone number (optional)"
+                  className="w-full bg-jollof-surface border border-jollof-border rounded-lg px-4 py-2.5 text-jollof-text placeholder:text-jollof-text-muted focus:border-jollof-amber focus:outline-none"
+                />
               </div>
-            ))}
+              <p className="text-xs text-jollof-text-muted mt-2">
+                No account needed &mdash; you can create one after payment
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4 mb-6">
+            {/* Booking details */}
+            <div className="bg-jollof-bg rounded-lg p-4 border border-jollof-border">
+              <p className="text-xs text-jollof-amber font-semibold uppercase tracking-wide mb-2">
+                Booking
+              </p>
+              <p className="text-sm">
+                {seats} seat{seats > 1 ? "s" : ""} at Jollof Bash
+              </p>
+              <p className="text-xs text-jollof-text-muted mt-1">
+                Food served Mezze/Buffet style &mdash; set menu included
+              </p>
+              {dietaryNotes && (
+                <p className="text-xs text-jollof-text-muted mt-1">
+                  Dietary notes: {dietaryNotes}
+                </p>
+              )}
+            </div>
 
             {/* Drinks summary */}
             {(isByob || (drinkOption === "order" && selectedDrinks.length > 0)) && (
@@ -604,7 +661,7 @@ export default function BookPage() {
             </button>
             <button
               onClick={handlePay}
-              disabled={paying}
+              disabled={paying || (!user && (!guestName.trim() || !guestEmail.trim()))}
               className="flex-1 bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
               {paying ? (

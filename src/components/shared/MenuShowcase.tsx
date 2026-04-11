@@ -7,9 +7,9 @@ import {
   MENU_MAINS,
   MENU_DESSERTS,
   VENUE,
-  type MenuItem,
-  type MenuCategory,
 } from "@/lib/constants";
+import { formatPence } from "@/lib/utils";
+import type { MenuItem, MenuCategory } from "@/types";
 
 function MenuSection({
   title,
@@ -32,11 +32,27 @@ function MenuSection({
         {items.map((item) => (
           <div key={item.id} className="flex items-start gap-3">
             <span className="text-3xl">{item.emoji}</span>
-            <div>
-              <p className="font-semibold">{item.name}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold">{item.name}</p>
+                {item.pricePence && (
+                  <span className="text-xs font-semibold text-jollof-amber">
+                    {formatPence(item.pricePence)}
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-jollof-text-muted">
                 {item.description}
               </p>
+              {item.availability && item.availability !== "BOTH" && (
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full mt-1 inline-block ${
+                  item.availability === "EVENT"
+                    ? "bg-amber-600/20 text-amber-400"
+                    : "bg-green-600/20 text-green-400"
+                }`}>
+                  {item.availability === "EVENT" ? "Event" : "Takeaway"}
+                </span>
+              )}
             </div>
           </div>
         ))}
@@ -145,17 +161,33 @@ export function MenuShowcase() {
 
             {/* Food images row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-amber-600 to-red-700 flex items-center justify-center text-6xl">
-                🍚
+              <div className="aspect-square rounded-2xl overflow-hidden relative">
+                <img
+                  src="https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=400&h=400&fit=crop&q=80"
+                  alt="Jollof rice"
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-green-700 to-emerald-900 flex items-center justify-center text-6xl">
-                🥗
+              <div className="aspect-square rounded-2xl overflow-hidden relative">
+                <img
+                  src="https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=400&h=400&fit=crop&q=80"
+                  alt="Grilled chicken"
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-orange-600 to-amber-800 flex items-center justify-center text-6xl">
-                🍗
+              <div className="aspect-square rounded-2xl overflow-hidden relative">
+                <img
+                  src="https://images.unsplash.com/photo-1590689080478-14f5e4a4c5e0?w=400&h=400&fit=crop&q=80"
+                  alt="Fried plantain"
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-red-600 to-rose-900 flex items-center justify-center text-6xl">
-                🍲
+              <div className="aspect-square rounded-2xl overflow-hidden relative">
+                <img
+                  src="https://images.unsplash.com/photo-1567982047351-76b6f93e38ee?w=400&h=400&fit=crop&q=80"
+                  alt="African stew"
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
           </>

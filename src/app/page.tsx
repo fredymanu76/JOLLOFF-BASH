@@ -5,6 +5,8 @@ import {
   Users,
   Gift,
   ArrowRight,
+  ShoppingBag,
+  Truck,
 } from "lucide-react";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
@@ -21,58 +23,104 @@ export default function LandingPage() {
       <Navbar />
 
       <main>
-        {/* Hero Section */}
-        <section className="min-h-screen flex flex-col items-center justify-center px-4 pt-16 text-center bg-gradient-to-b from-jollof-bg via-jollof-surface to-jollof-bg">
-          <div className="max-w-3xl">
+        <GalleryCarousel />
+
+        {/* Hero Section — Split Cards */}
+        <section className="flex flex-col items-center justify-center px-4 py-16 text-center bg-gradient-to-b from-jollof-bg via-jollof-surface to-jollof-bg">
+          <div className="max-w-3xl mb-10">
             <p className="text-jollof-amber font-semibold mb-4 tracking-wide uppercase text-sm">
-              Monthly Supper Club
+              West African Cuisine
             </p>
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               Jollof{" "}
               <span className="text-jollof-amber">Bash</span>
             </h1>
-            <p className="text-xl md:text-2xl text-jollof-text-muted mb-8 max-w-2xl mx-auto">
-              A celebration of West African flavours. Join us every last
-              Saturday of the month for an unforgettable dining experience.
+            <p className="text-xl md:text-2xl text-jollof-text-muted max-w-2xl mx-auto">
+              A celebration of West African flavours. Monthly supper club events &amp; takeaway ordering.
             </p>
+          </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          {/* Split Hero Cards */}
+          <div className="max-w-4xl w-full grid md:grid-cols-2 gap-6 mb-12">
+            {/* Event Card */}
+            <div className="bg-jollof-surface rounded-2xl p-6 border border-jollof-border text-left">
+              <div className="flex items-center gap-2 mb-4">
+                <CalendarDays size={20} className="text-jollof-amber" />
+                <h2 className="font-bold text-lg">Jollof Bash Event</h2>
+              </div>
+              <div className="mb-4">
+                <p className="text-sm text-jollof-text-muted mb-1">Next event</p>
+                <p className="font-semibold">{formatEventDate(nextEvent)}</p>
+                <p className="text-sm text-jollof-text-muted">
+                  {formatEventTime(nextEvent)} &mdash; {formatPence(SEAT_PRICE_PENCE)} per seat
+                </p>
+              </div>
+              <div className="text-sm text-jollof-text-muted mb-4 space-y-1">
+                <p className="flex items-center gap-2">
+                  <UtensilsCrossed size={14} className="text-jollof-amber" />
+                  Set menu &mdash; food served Mezze/Buffet style
+                </p>
+                <p className="flex items-center gap-2">
+                  <Users size={14} className="text-jollof-amber" />
+                  Intimate setting, last Saturday monthly
+                </p>
+              </div>
               <Link
-                href="/register"
-                className="bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-8 py-3 rounded-lg text-lg transition-colors inline-flex items-center justify-center gap-2"
+                href="/book"
+                className="w-full bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-6 py-2.5 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
               >
-                Book Your Seat <ArrowRight size={20} />
+                Book Your Seat <ArrowRight size={16} />
               </Link>
-              <a
-                href="#next-event"
-                className="border border-jollof-border hover:border-jollof-amber text-jollof-text px-8 py-3 rounded-lg text-lg transition-colors"
-              >
-                View Next Event
-              </a>
             </div>
 
-            <div className="flex flex-wrap gap-6 justify-center text-sm text-jollof-text-muted">
-              <div className="flex items-center gap-2">
-                <UtensilsCrossed size={16} className="text-jollof-amber" />
-                <span>West African Cuisine</span>
+            {/* Takeaway Card */}
+            <div className="bg-jollof-surface rounded-2xl p-6 border border-jollof-border text-left">
+              <div className="flex items-center gap-2 mb-4">
+                <ShoppingBag size={20} className="text-jollof-amber" />
+                <h2 className="font-bold text-lg">Next Day Order</h2>
               </div>
-              <div className="flex items-center gap-2">
-                <CalendarDays size={16} className="text-jollof-amber" />
-                <span>Last Saturday Monthly</span>
+              <div className="mb-4">
+                <p className="text-lg font-semibold">
+                  Fresh West African food, delivered tomorrow
+                </p>
+                <p className="text-sm text-jollof-text-muted mt-1">
+                  Browse our menu and order for next day delivery
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-jollof-amber" />
-                <span>Intimate Setting</span>
+              <div className="text-sm text-jollof-text-muted mb-4 space-y-1">
+                <p className="flex items-center gap-2">
+                  <Truck size={14} className="text-jollof-amber" />
+                  Next day delivery to your door
+                </p>
+                <p className="flex items-center gap-2">
+                  <ShoppingBag size={14} className="text-jollof-amber" />
+                  Order today, enjoy tomorrow
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Gift size={16} className="text-jollof-amber" />
-                <span>Gift Tickets Available</span>
-              </div>
+              <Link
+                href="/order"
+                className="w-full bg-jollof-red hover:bg-jollof-red/90 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+              >
+                Order Now <ArrowRight size={16} />
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-6 justify-center text-sm text-jollof-text-muted">
+            <div className="flex items-center gap-2">
+              <UtensilsCrossed size={16} className="text-jollof-amber" />
+              <span>West African Cuisine</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CalendarDays size={16} className="text-jollof-amber" />
+              <span>Last Saturday Monthly</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Gift size={16} className="text-jollof-amber" />
+              <span>Gift Tickets Available</span>
             </div>
           </div>
         </section>
-
-        <GalleryCarousel />
 
         {/* Next Event Section */}
         <section id="next-event" className="py-20 px-4">
@@ -110,7 +158,7 @@ export default function LandingPage() {
 
               <div className="mt-8 pt-8 border-t border-jollof-border text-center">
                 <Link
-                  href="/register"
+                  href="/book"
                   className="bg-jollof-amber hover:bg-jollof-amber-dark text-jollof-bg font-semibold px-8 py-3 rounded-lg text-lg transition-colors inline-flex items-center gap-2"
                 >
                   Reserve Your Spot <ArrowRight size={20} />
@@ -157,11 +205,11 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="bg-jollof-bg rounded-xl p-6 border border-jollof-border">
-                <Gift size={32} className="text-jollof-amber mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Gift a Seat</h3>
+                <ShoppingBag size={32} className="text-jollof-amber mx-auto mb-4" />
+                <h3 className="font-semibold mb-2">Next Day Delivery</h3>
                 <p className="text-sm text-jollof-text-muted">
-                  Surprise someone special with a gift ticket to an upcoming
-                  supper.
+                  Order your favourite West African dishes for next day
+                  delivery to your door.
                 </p>
               </div>
             </div>
