@@ -213,6 +213,18 @@ export default function LandingPage() {
                 </p>
               </div>
             </div>
+
+            {/* Food Hygiene Rating */}
+            <div className="mt-12 flex flex-col items-center">
+              <img
+                src="/food-hygiene-rating.jpg"
+                alt="Food Standards Agency – Food Hygiene Rating 5 (Very Good)"
+                className="w-64 md:w-80 rounded-xl"
+              />
+              <p className="text-xs text-jollof-text-muted mt-3">
+                Rated 5 (Very Good) by the Food Standards Agency
+              </p>
+            </div>
           </div>
         </section>
 
